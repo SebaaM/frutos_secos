@@ -1,4 +1,4 @@
-export type Category = "frutos-secos" | "mixes" | "hierbas"
+export type Category = string
 
 export type ProductVariant = {
   id: string
@@ -20,6 +20,7 @@ export type Product = {
   id: string
   slug: string
   category: Category
+  categoryName?: string
   name: string
   description: string
   image: string

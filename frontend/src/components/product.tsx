@@ -41,7 +41,7 @@ export function ProductCard({
       </button>
       <div className="flex flex-1 flex-col p-4 md:p-5">
         <p className="mb-1 text-[11px] font-bold tracking-[0.12em] text-terracotta uppercase">
-          {categoryLabels[product.category]}
+          {product.categoryName || categoryLabels[product.category] || product.category}
         </p>
         <h3 className="font-display text-xl leading-tight font-semibold text-olive-dark">
           {product.name}

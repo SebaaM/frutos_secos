@@ -121,7 +121,7 @@ export default function ProductPage({
         </div>
 
         <div className="lg:pt-5">
-          <Eyebrow>{categoryLabels[product.category]}</Eyebrow>
+          <Eyebrow>{product.categoryName || categoryLabels[product.category] || product.category}</Eyebrow>
           <h1 className="font-display text-5xl leading-none font-semibold text-olive-dark md:text-6xl">
             {product.name}
           </h1>
