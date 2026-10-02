@@ -1,9 +1,9 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
-from uuid import uuid4
 
 
 def product_image_path(instance, filename):

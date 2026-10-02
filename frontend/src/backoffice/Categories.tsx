@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import {
   saveCategory,
   slugify,
@@ -16,9 +16,13 @@ import {
 export default function Categories({
   categories,
   onSaved,
+  onDirty,
+  onBusy,
 }: {
   categories: AdminCategory[]
   onSaved: (category: AdminCategory) => void
+  onDirty: (dirty: boolean) => void
+  onBusy: (busy: boolean) => void
 }) {
   const [editing, setEditing] = useState<AdminCategory | null>(null)
   const [open, setOpen] = useState(false)
@@ -28,8 +32,34 @@ export default function Categories({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
+  const dirty =
+    open &&
+    (name !== (editing?.name || "") ||
+      slug !== (editing?.slug || "") ||
+      active !== (editing?.is_active ?? true))
+  useEffect(() => {
+    onDirty(dirty)
+  }, [dirty, onDirty])
+  useEffect(() => {
+    onBusy(busy)
+  }, [busy, onBusy])
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (dirty) {
+        event.preventDefault()
+        event.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", beforeUnload)
+    return () => window.removeEventListener("beforeunload", beforeUnload)
+  }, [dirty])
 
   function edit(category: AdminCategory | null) {
+    if (
+      dirty &&
+      !window.confirm("¿Descartar los cambios pendientes de esta categoría?")
+    )
+      return
     setEditing(category)
     setName(category?.name || "")
     setSlug(category?.slug || "")
@@ -63,12 +93,16 @@ export default function Categories({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-3xl font-semibold">Categorías</h2>
+          <h1 className="font-display text-3xl font-semibold">Categorías</h1>
           <p className="mt-1 text-sm text-charcoal/65">
             Ordená tu catálogo. Las categorías se desactivan, no se eliminan.
           </p>
         </div>
-        <button className={primaryClass} onClick={() => edit(null)}>
+        <button
+          className={primaryClass}
+          onClick={() => edit(null)}
+          disabled={busy}
+        >
           Nueva categoría
         </button>
       </div>

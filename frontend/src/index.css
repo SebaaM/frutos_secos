@@ -30,7 +30,7 @@
 
   body {
     margin: 0;
-    min-width: 320px;
+    min-width: 0;
     background: var(--color-cream);
     color: var(--color-charcoal);
     font-family: var(--font-sans);

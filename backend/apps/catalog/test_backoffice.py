@@ -196,12 +196,19 @@ class BackofficeTests(TestCase):
     def test_backoffice_unavailable_in_production_remote_or_untrusted_origin(self):
         with override_settings(DEBUG=False):
             self.assertEqual(self.client.get(self.url).status_code, 403)
+            self.assertEqual(self.client.get("/api/v1/backoffice/").status_code, 403)
         with override_settings(BACKOFFICE_ENABLED=False):
             self.assertEqual(self.client.get(self.url).status_code, 403)
         self.assertEqual(self.client.get(self.url, REMOTE_ADDR="192.168.1.2").status_code, 403)
         self.assertEqual(self.client.post(self.url + "images/", {}, HTTP_ORIGIN="https://evil.example").status_code, 403)
         self.assertEqual(self.client.get(self.url, HTTP_ORIGIN="http://localhost:8443").status_code, 200)
         self.assertEqual(self.client.patch(self.url, {"name": "Menta"}, format="json", HTTP_ORIGIN="http://127.0.0.1:8443").status_code, 200)
+        self.assertEqual(self.client.get(self.url, HTTP_X_BACKOFFICE_CLIENT_IP="192.168.1.2").status_code, 403)
+        self.assertEqual(self.client.get(self.url, HTTP_X_BACKOFFICE_CLIENT_IP="::ffff:127.0.0.1").status_code, 200)
+
+    def test_public_catalog_root_does_not_link_to_administration(self):
+        response = self.client.get("/api/v1/catalog/")
+        self.assertEqual(response.data["categories"], "http://testserver/api/v1/catalog/categories/")
 
 
 @override_settings(DEBUG=True, BACKOFFICE_ENABLED=True)

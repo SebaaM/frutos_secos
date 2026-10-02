@@ -180,12 +180,14 @@ export default function ProductEditor({
   onSaved,
   onClose,
   onDirty,
+  onBusy,
 }: {
   product: AdminProduct | null
   categories: AdminCategory[]
   onSaved: (product: AdminProduct) => void
   onClose: () => void
   onDirty: (dirty: boolean) => void
+  onBusy: (busy: boolean) => void
 }) {
   const initial: ProductDraft = product
     ? toDraft(product)
@@ -218,6 +220,10 @@ export default function ProductEditor({
     category?.name.toLowerCase().includes("hierba")
       ? [25, 50, 100]
       : [100, 250, 500]
+
+  useEffect(() => {
+    onBusy(busy)
+  }, [busy, onBusy])
 
   useEffect(() => {
     onDirty(dirty)
@@ -358,9 +364,9 @@ export default function ProductEditor({
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-display text-3xl font-semibold">
+          <h1 className="font-display text-3xl font-semibold">
             {id ? "Editar producto" : "Nuevo producto"}
-          </h2>
+          </h1>
           <p className="mt-1 text-sm text-charcoal/65">
             Datos, presentaciones y galería. Los productos se ocultan con
             borrador, no se eliminan.

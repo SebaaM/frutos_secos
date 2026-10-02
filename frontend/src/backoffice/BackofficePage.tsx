@@ -32,6 +32,7 @@ export default function BackofficePage({
     product: AdminProduct | null
   } | null>(null)
   const [dirty, setDirty] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
   const [published, setPublished] = useState("")
@@ -58,10 +59,11 @@ export default function BackofficePage({
   }, [reload])
   function mayLeave() {
     return (
-      !dirty ||
-      window.confirm(
-        "Hay cambios pendientes de guardar. ¿Querés salir y descartarlos?",
-      )
+      !saving &&
+      (!dirty ||
+        window.confirm(
+          "Hay cambios pendientes de guardar. ¿Querés salir y descartarlos?",
+        ))
     )
   }
   function changeTab(next: string) {
@@ -138,6 +140,7 @@ export default function BackofficePage({
           </div>
           <button
             className={actionClass}
+            disabled={saving}
             onClick={() => {
               if (mayLeave()) navigate("/catalogo")
             }}
@@ -158,6 +161,7 @@ export default function BackofficePage({
         >
           <button
             className={tab === "products" ? primaryClass : actionClass}
+            disabled={saving}
             onClick={() => changeTab("products")}
             aria-current={tab === "products" ? "page" : undefined}
           >
@@ -165,6 +169,7 @@ export default function BackofficePage({
           </button>
           <button
             className={tab === "categories" ? primaryClass : actionClass}
+            disabled={saving}
             onClick={() => changeTab("categories")}
             aria-current={tab === "categories" ? "page" : undefined}
           >
@@ -192,6 +197,7 @@ export default function BackofficePage({
               categories={categories}
               onSaved={productSaved}
               onDirty={setDirty}
+              onBusy={setSaving}
               onClose={() => {
                 if (mayLeave()) {
                   setEditor(null)
@@ -201,7 +207,12 @@ export default function BackofficePage({
               }}
             />
           ) : tab === "categories" ? (
-            <Categories categories={categories} onSaved={categorySaved} />
+            <Categories
+              categories={categories}
+              onSaved={categorySaved}
+              onDirty={setDirty}
+              onBusy={setSaving}
+            />
           ) : (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">

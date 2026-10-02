@@ -31,11 +31,18 @@ react(),
       },
     },
     server: {
-      host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
+      host: process.env.FIGMA_DEV_SERVER_HOST || '127.0.0.1',
       port: parseInt(process.env.PORT || '8443'),
       strictPort: true,
       proxy: {
-        '/api': { target: 'http://127.0.0.1:8000', changeOrigin: true },
+        '/api': {
+          target: 'http://127.0.0.1:8000', changeOrigin: true,
+          configure(proxy) {
+            proxy.on('proxyReq', (proxyReq, req) => {
+              proxyReq.setHeader('X-Backoffice-Client-IP', req.socket.remoteAddress || 'unknown')
+            })
+          },
+        },
         '/media': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       },
       watch: {

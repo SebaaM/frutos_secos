@@ -30,6 +30,7 @@ export default function StockPanel({
   const [loading, setLoading] = useState(true)
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     void getMovements(variant.id)
       .then((value) => {
         if (!cancelled) setMovements(value)

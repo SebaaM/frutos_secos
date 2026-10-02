@@ -15,10 +15,10 @@ class AdminCategorySerializer(serializers.ModelSerializer):
 class VariantInputSerializer(serializers.Serializer):
     id = serializers.IntegerField(required=False, min_value=1)
     sku = serializers.CharField(max_length=64)
-    weight_grams = serializers.IntegerField(min_value=1)
+    weight_grams = serializers.IntegerField(min_value=1, max_value=2147483647)
     price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal("0.01"))
     is_active = serializers.BooleanField(default=True)
-    stock_physical = serializers.IntegerField(min_value=0, required=False)
+    stock_physical = serializers.IntegerField(min_value=0, max_value=2147483647, required=False)
 
 
 class ProductInputSerializer(serializers.ModelSerializer):
@@ -78,9 +78,9 @@ class ImageInputSerializer(serializers.ModelSerializer):
 
 
 class StockAdjustmentSerializer(serializers.Serializer):
-    delta = serializers.IntegerField()
+    delta = serializers.IntegerField(min_value=-2147483647, max_value=2147483647)
     reason = serializers.CharField(max_length=255, allow_blank=False)
-    expected_stock = serializers.IntegerField(min_value=0)
+    expected_stock = serializers.IntegerField(min_value=0, max_value=2147483647)
 
     def validate_delta(self, value):
         if value == 0:

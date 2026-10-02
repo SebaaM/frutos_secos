@@ -1,3 +1,5 @@
+from ipaddress import ip_address
+
 from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -21,9 +23,20 @@ class LocalDevelopmentOnly(BasePermission):
 
     def has_permission(self, request, view):
         origin = request.headers.get("Origin")
+        def local(address):
+            try:
+                parsed = ip_address(address or "")
+                mapped = getattr(parsed, "ipv4_mapped", None)
+                return (mapped or parsed).is_loopback
+            except ValueError:
+                return False
+
+        # Vite overwrites this header with the socket address; clients cannot spoof it.
+        forwarded = request.META.get("HTTP_X_BACKOFFICE_CLIENT_IP")
         return (
             settings.DEBUG and settings.BACKOFFICE_ENABLED
-            and request.META.get("REMOTE_ADDR") in {"127.0.0.1", "::1"}
+            and local(request.META.get("REMOTE_ADDR"))
+            and (forwarded is None or local(forwarded))
             and (not origin or origin in settings.CORS_ALLOWED_ORIGINS)
         )
 
@@ -213,6 +226,8 @@ class VariantAdminViewSet(viewsets.GenericViewSet):
             next_stock = variant.stock_physical + data["delta"]
             if next_stock < variant.stock_reserved:
                 raise serializers.ValidationError("El físico no puede ser negativo ni menor al reservado.")
+            if next_stock > 2147483647:
+                raise serializers.ValidationError("El stock supera el máximo de unidades admitido.")
             StockMovement.objects.create(variant=variant, delta=data["delta"], previous_stock=variant.stock_physical,
                                          resulting_stock=next_stock, reason=data["reason"])
             variant.stock_physical = next_stock
