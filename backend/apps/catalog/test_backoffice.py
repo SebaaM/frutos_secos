@@ -80,6 +80,38 @@ class BackofficeTests(TestCase):
         ]:
             self.assertEqual(self.client.patch(self.url, {"variants": variants}, format="json").status_code, 400)
 
+    def test_global_sku_conflict_rolls_back_earlier_variant_and_metadata_updates(self):
+        other = Product.objects.create(category=self.category, name="Otra hierba", slug="otra")
+        ProductVariant.objects.create(product=other, sku="TAKEN", weight_grams=25, price="100.00")
+        response = self.client.patch(self.url, {"name": "No guardar", "variants": [
+            self.variant_data(price="1700.00"), {"sku": "TAKEN", "weight_grams": 100, "price": "2000.00", "stock_physical": 4},
+        ]}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.variant.refresh_from_db()
+        self.product.refresh_from_db()
+        self.assertEqual(str(self.variant.price), "1300.00")
+        self.assertEqual(self.product.name, "Menta")
+        self.assertEqual(StockMovement.objects.count(), 0)
+
+    def test_stock_reaches_exactly_reserved_and_cannot_drop_further(self):
+        url = f"/api/v1/backoffice/variants/{self.variant.id}/adjust-stock/"
+        response = self.client.post(url, {"delta": -8, "reason": "Corrección", "expected_stock": 10}, format="json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["stock_available"], 0)
+        response = self.client.post(url, {"delta": -1, "reason": "Corrección", "expected_stock": 2}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(StockMovement.objects.count(), 1)
+
+    def test_gallery_upload_becomes_public_and_invalid_order_leaves_cover_intact(self):
+        self.publish()
+        image = self.product.images.get()
+        self.assertEqual(self.client.post(self.url + "reorder-images/", {"ids": [99999]}, format="json").status_code, 400)
+        image.refresh_from_db()
+        self.assertEqual(image.position, 0)
+        public = self.client.get(f"/api/v1/catalog/products/{self.product.id}/")
+        self.assertEqual(public.status_code, 200)
+        self.assertEqual(public.data["images"][0]["image_url"], "http://testserver" + image.image.url)
+
     def test_reserved_weight_and_stock_are_protected(self):
         for change in [{"weight_grams": 60}, {"is_active": False}, {"stock_physical": 20}]:
             response = self.client.patch(self.url, {"variants": [self.variant_data(**change)]}, format="json")
@@ -169,3 +201,21 @@ class BackofficeTests(TestCase):
         self.assertEqual(self.client.get(self.url, REMOTE_ADDR="192.168.1.2").status_code, 403)
         self.assertEqual(self.client.post(self.url + "images/", {}, HTTP_ORIGIN="https://evil.example").status_code, 403)
         self.assertEqual(self.client.get(self.url, HTTP_ORIGIN="http://localhost:8443").status_code, 200)
+        self.assertEqual(self.client.patch(self.url, {"name": "Menta"}, format="json", HTTP_ORIGIN="http://127.0.0.1:8443").status_code, 200)
+
+
+@override_settings(DEBUG=True, BACKOFFICE_ENABLED=True)
+class ExistingCatalogTests(TestCase):
+    fixtures = ["sample_catalog"]
+
+    def test_backoffice_preserves_existing_example_catalog(self):
+        client = APIClient()
+        response = client.get("/api/v1/backoffice/products/")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual((Product.objects.count(), ProductVariant.objects.count(), ProductImage.objects.count()), (8, 19, 16))
+        before = list(ProductVariant.objects.values_list("sku", "price", "stock_physical", "stock_reserved"))
+        product = Product.objects.first()
+        urls = list(product.images.values_list("image_url", flat=True))
+        self.assertEqual(client.patch(f"/api/v1/backoffice/products/{product.id}/", {"name": product.name}, format="json").status_code, 200)
+        self.assertEqual(list(ProductVariant.objects.values_list("sku", "price", "stock_physical", "stock_reserved")), before)
+        self.assertEqual(list(product.images.values_list("image_url", flat=True)), urls)

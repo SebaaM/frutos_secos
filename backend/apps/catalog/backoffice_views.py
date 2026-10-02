@@ -76,6 +76,7 @@ def write_variants(product, variants):
 
 
 class CategoryAdminViewSet(viewsets.ModelViewSet):
+    authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
     serializer_class = AdminCategorySerializer
     queryset = Category.objects.all()
@@ -91,6 +92,7 @@ class CategoryAdminViewSet(viewsets.ModelViewSet):
 
 
 class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
+    authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
     serializer_class = AdminProductSerializer
 
@@ -161,6 +163,7 @@ class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ImageAdminViewSet(viewsets.GenericViewSet):
+    authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
 
     def partial_update(self, request, pk=None):
@@ -193,6 +196,7 @@ class ImageAdminViewSet(viewsets.GenericViewSet):
 
 
 class VariantAdminViewSet(viewsets.GenericViewSet):
+    authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
 
     @action(detail=True, methods=["post"], url_path="adjust-stock")
