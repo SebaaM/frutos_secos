@@ -73,7 +73,7 @@ function VariantRow({
       </legend>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Field label="Peso fijo">
-          <div className="flex gap-2">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_4rem] gap-2">
             <input
               className={inputClass}
               aria-label={`Peso fijo de presentación ${index + 1}`}
@@ -93,7 +93,7 @@ function VariantRow({
               disabled={disabled || variant.stock_reserved > 0}
             />
             <select
-              className={`${inputClass} w-20 shrink-0`}
+              className={inputClass}
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               aria-label={`Unidad de peso de presentación ${index + 1}`}
