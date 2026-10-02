@@ -4,6 +4,8 @@
 
 - `frontend/`: React 19, TypeScript, Vite 8 y Tailwind CSS 4; interfaz pública importada de Figma Make.
 - `frontend/src/backoffice/`: panel React de catálogo, imágenes y stock, en `/backoffice`.
+- `frontend/src/backoffice/stock-status.ts`: criterios compartidos de alertas/filtros por presentación activa;
+  `StockBadge.tsx`: indicadores y resumen de disponible/reservado/físico. Pruebas con `pnpm test`.
 - `frontend/src/lib/api.ts`: base de API y tratamiento de errores compartidos.
 - `frontend/src/lib/catalog-api.ts`: adaptación del catálogo público a los componentes existentes.
 - `frontend/src/lib/backoffice-api.ts`: contratos administrativos; precios transportados como strings decimales.
@@ -31,6 +33,9 @@ controles de al menos 44 px y disposición mobile-first.
 
 Django valida publicación, peso, stock y galería. Disponible = físico − reservado.
 Los ajustes tienen motivo, protección de concurrencia y transacción; no se editan reservas.
+La UI alerta por presentación activa: 0 agotado, 1–5 últimas unidades, 6+ disponible.
+Un producto con algún peso agotado y otros disponibles tiene stock parcial; sin variantes activas
+no se clasifica como agotado. El disponible existente se lee desde la API, nunca del físico solamente.
 No se borran productos, categorías ni variantes desde el panel; se desactivan/ocultan.
 Las imágenes sí pueden quitarse de la galería; se preservan los archivos físicos locales.
 

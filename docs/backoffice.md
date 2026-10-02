@@ -41,6 +41,27 @@ La interfaz admite g y kg y guarda siempre gramos enteros.
 - Historial: últimas 100 operaciones, con fecha, motivo, delta, físico anterior y resultante.
   No se atribuye un usuario todavía; la auditoría de operadores se sumará con autenticación.
 
+### Alertas de reposición
+
+- El listado destaca **Sin stock** (terracota), **Últimas unidades** (ámbar) y disponible (oliva),
+  con texto e indicadores además del color. Muestra paquetes disponibles para cada peso.
+- Últimas unidades significa **1–5 paquetes disponibles por presentación activa**, no la suma del producto.
+- **Stock parcial / Presentaciones agotadas**: al menos un peso activo agotado y otro con unidades.
+  El stock de otros pesos no oculta la alerta. **Sin stock** exige que todas las presentaciones activas estén agotadas.
+- Sin presentaciones activas es un estado neutro: no se considera agotado ni genera alertas.
+  Las variantes inactivas tampoco entran en las cantidades disponibles o en las alertas.
+- La franja de alertas permite ver productos por reponer, totalmente agotados, stock parcial o últimas unidades.
+  Incluye publicados y borradores de todo el catálogo, independientemente de los filtros actuales;
+  al pulsar un acceso rápido limpia búsqueda/categoría/publicación para mostrar todos los afectados.
+  Un producto puede aparecer en stock parcial y últimas unidades; el total de afectados no lo duplica.
+- El editor y el panel de ajustes separan disponible, reservado y físico, destacando el disponible.
+  Si el físico está reservado, el mensaje indica que no está disponible para vender; no supone una merma.
+- El botón **Reponer stock / Ver historial** abre y enfoca el panel de ajuste existente.
+  Sigue requiriendo un motivo y validación transaccional en Django; no repone automáticamente.
+- Los cambios de stock confirmados por Django actualizan los indicadores del editor. Al volver al listado
+  o pulsar Actualizar se consulta nuevamente la API. No hay notificaciones externas, polling ni dashboard.
+- En presentaciones nuevas, el stock mostrado es inicial y pendiente de guardar.
+
 Producto y presentaciones se guardan en una misma transacción. Las operaciones de galería
 y los ajustes de stock son transacciones independientes. Bloquean el producto antes de
 escribir para serializar cambios; PostgreSQL es necesario para validar concurrencia real.
@@ -112,6 +133,11 @@ Las pruebas usan una base de datos temporal y un directorio de medios temporal.
 Validar: publicación incompleta, SKU/pesos repetidos, operaciones atómicas, archivos inválidos,
 límites y orden de galería, última imagen publicada, ajustes y conflictos de stock, bloqueo
 en producción/red/orígenes externos, catálogo público y conservación del catálogo de ejemplo.
+
+Desde `frontend/`: `pnpm test` verifica límites 0/1/5/6, variantes inactivas, stock reservado,
+agotados totales/parciales y filtros de reposición. Requiere Node 22.6+ con soporte de type stripping
+(entorno actual Node 24), sin instalar otro framework de pruebas. Validar también TypeScript,
+build y disposición a 320 px y escritorio. Las pruebas no escriben sobre el catálogo real.
 
 ## Etapa 2 acordada (no implementada)
 
