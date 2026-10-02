@@ -1,0 +1,29 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# JavaScript
+node_modules/
+dist/
+.vite/
+.pnpm-store/
+*.tsbuildinfo
+
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+staticfiles/
+media/
+db.sqlite3
+
+# Tooling and operating system files
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+Thumbs.db
