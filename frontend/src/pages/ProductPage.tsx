@@ -10,32 +10,48 @@ import {
   categoryLabels,
   formatPrice,
   getStockState,
-  products,
   type Product,
   type ProductVariant,
 } from "../data/products"
 
 export default function ProductPage({
   product,
+  products,
   navigate,
   onAdd,
 }: {
   product: Product
+  products: Product[]
   navigate: Navigate
   onAdd: (product: Product, variant: ProductVariant, quantity: number) => void
 }) {
   const firstAvailable = product.variants.find((variant) => variant.stock > 0)
+  const images = product.images?.length
+    ? product.images
+    : [
+        {
+          id: "cover",
+          url: product.image,
+          alt: product.imageAlt,
+          credit: product.imageCredit,
+          position: 0,
+        },
+      ]
   const [selectedId, setSelectedId] = useState(firstAvailable?.id ?? "")
+  const [selectedImageId, setSelectedImageId] = useState(images[0]?.id ?? "")
   const [quantity, setQuantity] = useState(1)
 
   useEffect(() => {
     setSelectedId(
       product.variants.find((variant) => variant.stock > 0)?.id ?? "",
     )
+    setSelectedImageId(images[0]?.id ?? "")
     setQuantity(1)
   }, [product.id])
 
   const selected = product.variants.find((variant) => variant.id === selectedId)
+  const selectedImage =
+    images.find((image) => image.id === selectedImageId) ?? images[0]
   const related = useMemo(
     () =>
       products
@@ -66,18 +82,42 @@ export default function ProductPage({
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
         <div>
           <div className="relative aspect-square overflow-hidden rounded-[28px] bg-cream-soft">
-            <img
-              src={product.image}
-              alt={product.imageAlt}
-              className="size-full object-cover"
-            />
+            {selectedImage ? (
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.alt}
+                className="size-full object-cover"
+              />
+            ) : null}
             <span className="absolute top-4 left-4">
               <StockBadge state={state} />
             </span>
           </div>
-          <p className="mt-3 text-[10px] text-charcoal/45">
-            Foto: {product.imageCredit}
-          </p>
+          {images.length > 1 ? (
+            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+              {images.map((image) => (
+                <button
+                  type="button"
+                  key={image.id}
+                  onClick={() => setSelectedImageId(image.id)}
+                  aria-label={`Ver imagen ${image.position + 1} de ${product.name}`}
+                  aria-pressed={image.id === selectedImage?.id}
+                  className={`size-16 shrink-0 overflow-hidden rounded-control border-2 focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-olive ${
+                    image.id === selectedImage?.id
+                      ? "border-olive"
+                      : "border-transparent"
+                  }`}
+                >
+                  <img src={image.url} alt="" className="size-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {selectedImage?.credit ? (
+            <p className="mt-3 text-[10px] text-charcoal/45">
+              Foto: {selectedImage.credit}
+            </p>
+          ) : null}
         </div>
 
         <div className="lg:pt-5">

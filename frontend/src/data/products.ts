@@ -8,6 +8,14 @@ export type ProductVariant = {
   stock: number
 }
 
+export type ProductImage = {
+  id: string
+  url: string
+  alt: string
+  credit: string
+  position: number
+}
+
 export type Product = {
   id: string
   slug: string
@@ -17,6 +25,7 @@ export type Product = {
   image: string
   imageAlt: string
   imageCredit: string
+  images?: ProductImage[]
   ingredients: string
   allergens: string
   storage: string

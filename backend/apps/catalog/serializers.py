@@ -40,6 +40,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "allergen_info",
             "image_url",
             "images",
+            "is_featured",
             "category",
             "variants",
         ]

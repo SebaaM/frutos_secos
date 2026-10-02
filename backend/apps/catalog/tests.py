@@ -64,6 +64,7 @@ class CatalogApiTests(TestCase):
         self.assertEqual(variant["availability"], "in_stock")
         self.assertEqual(len(response.json()[0]["images"]), 2)
         self.assertEqual(response.json()[0]["images"][0]["position"], 0)
+        self.assertFalse(response.json()[0]["is_featured"])
 
     def test_variant_reports_low_and_out_of_stock(self):
         low_stock = ProductVariant.objects.create(

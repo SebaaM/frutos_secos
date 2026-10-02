@@ -1,38 +1,44 @@
 import { ProductCard } from "../components/product"
 import { Button, Eyebrow, Icon } from "../components/ui"
-import { categoryLabels, products, type Category } from "../data/products"
+import type { Product } from "../data/products"
+import type { CatalogCategory } from "../lib/catalog-api"
 import type { Navigate } from "../components/layout"
 
-const categories: { id: Category description: string image: string }[] = [
-  {
-    id: "frutos-secos",
-    description: "Naturales, crocantes y elegidos uno a uno.",
-    image: products[0].image,
-  },
-  {
-    id: "mixes",
-    description: "Combinaciones listas para cada momento.",
-    image: products[3].image,
-  },
-  {
-    id: "hierbas",
-    description: "Aromas simples para bajar un cambio.",
-    image: products[5].image,
-  },
-]
+const categoryDescriptions: Record<string, string> = {
+  "frutos-secos": "Naturales, crocantes y elegidos uno a uno.",
+  mixes: "Combinaciones listas para cada momento.",
+  hierbas: "Aromas simples para bajar un cambio.",
+}
 
-export default function HomePage({ navigate }: { navigate: Navigate }) {
+export default function HomePage({
+  navigate,
+  products,
+  categories,
+}: {
+  navigate: Navigate
+  products: Product[]
+  categories: CatalogCategory[]
+}) {
   const featured = products.filter((product) => product.featured)
+  const hero = products.find((product) => product.slug === "castanas-de-caju") ?? products[0]
+  const categoryCards = categories.map((category) => ({
+    ...category,
+    description:
+      categoryDescriptions[category.slug] || "Productos seleccionados para todos los días.",
+    image: products.find((product) => product.category === category.slug)?.image,
+  }))
 
   return (
     <>
       <section className="page-container py-6 md:py-10">
         <div className="relative min-h-[590px] overflow-hidden rounded-[28px] bg-olive-dark md:min-h-[650px]">
-          <img
-            src={products[1].image}
-            alt="Castañas de cajú naturales en una escena de luz cálida"
-            className="absolute inset-0 size-full object-cover opacity-65 mix-blend-luminosity md:object-[center_54%]"
-          />
+          {hero ? (
+            <img
+              src={hero.image}
+              alt={hero.imageAlt}
+              className="absolute inset-0 size-full object-cover opacity-65 mix-blend-luminosity md:object-[center_54%]"
+            />
+          ) : null}
           <div className="absolute inset-0 bg-gradient-to-t from-olive-dark via-olive-dark/45 to-transparent md:bg-gradient-to-r md:from-olive-dark md:via-olive-dark/75 md:to-transparent" />
           <div className="relative z-10 flex min-h-[590px] max-w-2xl flex-col justify-end p-6 text-white md:min-h-[650px] md:justify-center md:p-14 lg:p-20">
             <Eyebrow>Tu despensa de todos los días</Eyebrow>
@@ -126,22 +132,24 @@ export default function HomePage({ navigate }: { navigate: Navigate }) {
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {categories.map((category) => (
+          {categoryCards.map((category) => (
             <button
               type="button"
               key={category.id}
-              onClick={() => navigate(`/catalogo?categoria=${category.id}`)}
+              onClick={() => navigate(`/catalogo?categoria=${category.slug}`)}
               className="group relative min-h-72 overflow-hidden rounded-card text-left shadow-card focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-olive"
             >
-              <img
-                src={category.image}
-                alt=""
-                className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
-              />
+              {category.image ? (
+                <img
+                  src={category.image}
+                  alt=""
+                  className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
+                />
+              ) : null}
               <span className="absolute inset-0 bg-gradient-to-t from-olive-dark/95 via-olive-dark/20 to-transparent" />
               <span className="absolute right-5 bottom-5 left-5 text-white">
                 <span className="mb-1 block font-display text-3xl font-semibold">
-                  {categoryLabels[category.id]}
+                  {category.name}
                 </span>
                 <span className="flex items-end justify-between gap-4 text-sm text-white/75">
                   {category.description}
