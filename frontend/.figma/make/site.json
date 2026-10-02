@@ -1,0 +1,10 @@
+{
+  "description": "Discover and order a variety of nuts and herbs effortlessly through a mobile-friendly interface, with final order confirmation via WhatsApp.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
