@@ -97,6 +97,11 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+# Temporary catalog administration is never available outside local DEBUG mode.
+BACKOFFICE_ENABLED = os.getenv("BACKOFFICE_ENABLED", "true").lower() == "true"
+DATA_UPLOAD_MAX_MEMORY_SIZE = 6 * 1024 * 1024
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:8443")
