@@ -230,8 +230,9 @@ export default function HomePage({
               Estamos para ayudarte.
             </p>
             <Button
+              variant="secondary"
               onClick={() => navigate("/catalogo")}
-              className="mt-6 bg-white text-olive-dark hover:bg-cream-soft"
+              className="mt-6"
             >
               Explorar el catálogo <Icon name="arrow" className="size-4" />
             </Button>
