@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",
     "apps.core",
     "apps.catalog",
 ]
@@ -96,7 +98,7 @@ TIME_ZONE = "America/Argentina/Buenos_Aires"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 # Temporary catalog administration is never available outside local DEBUG mode.
@@ -108,6 +110,40 @@ CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:8443,h
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:8443,http://127.0.0.1:8443")
 
 REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Rosana Frutos Secos — API",
+    "DESCRIPTION": (
+        "Catálogo público y administración local de productos, categorías, galerías y stock. "
+        "Precios en ARS como strings decimales; pesos enteros en gramos y stock en paquetes. "
+        "Pedidos, reservas y autenticación todavía no están implementados. "
+        "El backoffice y esta documentación requieren DEBUG, BACKOFFICE_ENABLED y cliente local. "
+        "Las operaciones de escritura de Swagger modifican datos reales: no ejecutarlas como prueba."
+    ),
+    "VERSION": "1.0.0",
+    "OAS_VERSION": "3.0.3",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "SERVE_AUTHENTICATION": [],
+    "SERVE_PERMISSIONS": ["apps.catalog.backoffice_views.LocalDevelopmentOnly"],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "PREPROCESSING_HOOKS": ["drf_spectacular.hooks.preprocess_exclude_path_format"],
+    "SWAGGER_UI_DIST": "SIDECAR",
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "displayRequestDuration": True,
+        "persistAuthorization": False,
+        "defaultModelsExpandDepth": -1,
+        "docExpansion": "none",
+        "validatorUrl": None,
+    },
+    "TAGS": [
+        {"name": "Sistema", "description": "Disponibilidad del servicio; no comprueba conexión a la base."},
+        {"name": "Catálogo", "description": "Lectura pública de productos publicados y categorías activas."},
+        {"name": "Backoffice", "description": "Solo desarrollo local, sin autenticación todavía."},
+    ],
 }

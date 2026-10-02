@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
+from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema_view
 
 from .backoffice_serializers import (
     AdminCategorySerializer, AdminProductSerializer, AdminVariantSerializer,
@@ -16,6 +17,7 @@ from .backoffice_serializers import (
 )
 from .models import Category, Product, ProductImage, ProductVariant, StockMovement
 from .serializers import ProductImageSerializer
+from .schema import admin_schema, ImageMetadataSerializer, ImageOrderSerializer, PRODUCT_EXAMPLE
 
 
 class LocalDevelopmentOnly(BasePermission):
@@ -88,6 +90,12 @@ def write_variants(product, variants):
                                              resulting_stock=initial_stock, reason="Stock inicial")
 
 
+@extend_schema_view(
+    list=admin_schema(summary="Listar todas las categorías", responses={200: AdminCategorySerializer(many=True)}, errors=(403,)),
+    retrieve=admin_schema(summary="Consultar categoría", responses={200: AdminCategorySerializer}, errors=(403, 404)),
+    create=admin_schema(summary="Crear categoría", request=AdminCategorySerializer, responses={201: AdminCategorySerializer}, errors=(400, 403), examples=[OpenApiExample("Categoría", value={"name": "Hierbas naturales", "slug": "hierbas-naturales", "is_active": True}, request_only=True)]),
+    partial_update=admin_schema(summary="Editar o desactivar categoría", request=AdminCategorySerializer, responses={200: AdminCategorySerializer}, description="No se puede desactivar si tiene productos publicados. No admite DELETE ni PUT."),
+)
 class CategoryAdminViewSet(viewsets.ModelViewSet):
     authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
@@ -104,6 +112,27 @@ class CategoryAdminViewSet(viewsets.ModelViewSet):
         serializer.save()
 
 
+@extend_schema_view(
+    list=admin_schema(
+        summary="Listar productos administrativos", responses={200: AdminProductSerializer(many=True)}, errors=(403,),
+        description="Incluye borradores, variantes inactivas y galería. Sin paginación; orden por nombre. Los filtros de disponibilidad del panel se aplican en React, no en este endpoint.",
+        parameters=[
+            OpenApiParameter("search", str, description="Buscar nombre o SKU, sin distinguir mayúsculas."),
+            OpenApiParameter("category", int, description="ID numérico de categoría existente."),
+            OpenApiParameter("published", str, enum=["true", "false"], description="Filtrar por publicación; otros valores no filtran."),
+        ],
+    ),
+    retrieve=admin_schema(summary="Consultar producto administrativo", responses={200: AdminProductSerializer}, errors=(403, 404)),
+    create=admin_schema(
+        summary="Crear producto con presentaciones", request=ProductInputSerializer, responses={201: AdminProductSerializer}, errors=(400, 403), examples=[PRODUCT_EXAMPLE],
+        description="Crear en borrador, cargar imágenes y luego publicar. Para publicar: categoría activa, al menos una imagen y una variante activa con precio positivo. SKU global único; peso único por producto. Productos y variantes se guardan en una transacción. stock_physical solo establece stock inicial de variantes nuevas; el reservado no se escribe.",
+    ),
+    partial_update=admin_schema(
+        summary="Editar producto y presentaciones", request=ProductInputSerializer, responses={200: AdminProductSerializer},
+        description="Los campos de producto son opcionales en PATCH. Si enviás variants, incluí todas las existentes con id y datos completos (sku, weight_grams, price, is_active); no se eliminan por omisión. Para ocultar: is_published=false o is_active=false. El stock existente solo cambia por adjust-stock. No cambiar peso ni desactivar una variante reservada. No admite DELETE ni PUT.",
+        examples=[OpenApiExample("Pasar a borrador", value={"is_published": False}, request_only=True)],
+    ),
+)
 class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
     authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
@@ -145,6 +174,13 @@ class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(AdminProductSerializer(product, context={"request": request}).data,
                         status=status.HTTP_200_OK if pk else status.HTTP_201_CREATED)
 
+    @admin_schema(
+        summary="Agregar imagen a la galería",
+        request={"multipart/form-data": ImageInputSerializer, "application/json": ImageInputSerializer},
+        responses={201: ProductImageSerializer},
+        description="Un archivo image por solicitud multipart o image_url en JSON, nunca ambos. alt_text obligatorio. Máximo 10 imágenes por producto; archivos JPEG/PNG/WebP de hasta 5 MiB y 25 megapíxeles. Se agrega al final; posición 0 es portada.",
+        examples=[OpenApiExample("Imagen desde URL", value={"image_url": "https://images.example.com/almendras.jpg", "alt_text": "Almendras naturales en un cuenco.", "credit": ""}, request_only=True, media_type="application/json")],
+    )
     @action(detail=True, methods=["post"], url_path="images")
     def add_image(self, request, pk=None):
         with transaction.atomic():
@@ -156,6 +192,12 @@ class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
             image = serializer.save(product=product, position=product.images.count())
         return Response(ProductImageSerializer(image, context={"request": request}).data, status=201)
 
+    @admin_schema(
+        summary="Ordenar galería y elegir portada", request=ImageOrderSerializer,
+        responses={200: ProductImageSerializer(many=True)},
+        description="Enviar todos los IDs de la galería exactamente una vez, en el orden deseado. El primer ID pasa a portada. Devuelve la galería ordenada.",
+        examples=[OpenApiExample("Orden de galería", value={"ids": [2, 1]}, request_only=True)],
+    )
     @action(detail=True, methods=["post"], url_path="reorder-images")
     def reorder_images(self, request, pk=None):
         with transaction.atomic():
@@ -176,9 +218,11 @@ class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class ImageAdminViewSet(viewsets.GenericViewSet):
+    queryset = ProductImage.objects.none()
     authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
 
+    @admin_schema(summary="Editar descripción o crédito de imagen", request=ImageMetadataSerializer, responses={200: ProductImageSerializer}, description="Solo alt_text y credit; para reemplazar archivo o URL, agregar una imagen nueva.")
     def partial_update(self, request, pk=None):
         image = get_object_or_404(ProductImage, pk=pk)
         with transaction.atomic():
@@ -193,6 +237,7 @@ class ImageAdminViewSet(viewsets.GenericViewSet):
             image = serializer.save()
         return Response(ProductImageSerializer(image, context={"request": request}).data)
 
+    @admin_schema(summary="Quitar imagen de la galería", responses={204: None}, description="Elimina la referencia, conserva el archivo físico para recuperación manual y normaliza posiciones. No se puede quitar la última imagen de un producto publicado: pasar antes a borrador.")
     def destroy(self, request, pk=None):
         image = get_object_or_404(ProductImage, pk=pk)
         with transaction.atomic():
@@ -209,9 +254,16 @@ class ImageAdminViewSet(viewsets.GenericViewSet):
 
 
 class VariantAdminViewSet(viewsets.GenericViewSet):
+    queryset = ProductVariant.objects.none()
     authentication_classes = []
     permission_classes = [LocalDevelopmentOnly]
 
+    @admin_schema(
+        summary="Ajustar stock físico con auditoría", request=StockAdjustmentSerializer,
+        responses={200: AdminVariantSerializer}, errors=(400, 403, 404, 409),
+        description="delta entero distinto de 0; reason obligatorio; expected_stock es el físico observado. Si cambió, responde 409. Transacción con bloqueo de filas y movimiento auditado. No modifica reservado ni permite físico negativo o menor al reservado. Disponible = físico − reservado. Cantidades en paquetes, no gramos.",
+        examples=[OpenApiExample("Ingreso de cinco paquetes", value={"delta": 5, "reason": "Reposición", "expected_stock": 10}, request_only=True)],
+    )
     @action(detail=True, methods=["post"], url_path="adjust-stock")
     def adjust_stock(self, request, pk=None):
         serializer = StockAdjustmentSerializer(data=request.data)
@@ -234,6 +286,7 @@ class VariantAdminViewSet(viewsets.GenericViewSet):
             variant.save(update_fields=["stock_physical"])
         return Response(AdminVariantSerializer(variant).data)
 
+    @admin_schema(summary="Consultar historial de stock", responses={200: StockMovementSerializer(many=True)}, errors=(403, 404), description="Hasta 100 movimientos, más recientes primero. Incluye delta, motivo, físico anterior/resultante y fecha.")
     @action(detail=True, methods=["get"], url_path="movements")
     def movements(self, request, pk=None):
         variant = get_object_or_404(ProductVariant, pk=pk)
