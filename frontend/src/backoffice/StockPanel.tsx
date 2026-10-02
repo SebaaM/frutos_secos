@@ -1,10 +1,14 @@
-import { useEffect, useState, type FormEvent } from "react"
+import { useEffect, useRef, useState, type FormEvent } from "react"
+
+import { VariantStockSummary } from "./StockBadge"
+
 import {
   adjustStock,
   getMovements,
   type AdminVariant,
   type StockMovement,
 } from "../lib/backoffice-api"
+
 import {
   actionClass,
   Field,
@@ -15,19 +19,36 @@ import {
 
 export default function StockPanel({
   variant,
+
   onClose,
+
   onAdjusted,
 }: {
   variant: AdminVariant
+
   onClose: () => void
+
   onAdjusted: (variant: AdminVariant) => void
 }) {
   const [delta, setDelta] = useState("")
+
   const [reason, setReason] = useState("")
+
   const [movements, setMovements] = useState<StockMovement[]>([])
+
   const [error, setError] = useState("")
+
   const [busy, setBusy] = useState(false)
+
   const [loading, setLoading] = useState(true)
+
+  const panelRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    panelRef.current?.focus({ preventScroll: true })
+    panelRef.current?.scrollIntoView({ block: "start" })
+  }, [variant.id])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
@@ -69,6 +90,8 @@ export default function StockPanel({
 
   return (
     <section
+      ref={panelRef}
+      tabIndex={-1}
       className="rounded-card border-2 border-olive bg-cream p-5"
       aria-label={`Stock de ${variant.sku}`}
     >
@@ -85,11 +108,7 @@ export default function StockPanel({
           Cerrar
         </button>
       </div>
-      <p className="mb-4 text-sm">
-        Físico: <strong>{variant.stock_physical}</strong> · Reservado:{" "}
-        <strong>{variant.stock_reserved}</strong> · Disponible:{" "}
-        <strong>{variant.stock_available}</strong>
-      </p>
+      <VariantStockSummary variant={variant} />
       <Notice error message={error} />
       <form onSubmit={submit} className="my-4 grid gap-4 sm:grid-cols-2">
         <Field

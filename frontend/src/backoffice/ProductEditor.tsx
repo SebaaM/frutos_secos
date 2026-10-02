@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react"
+
 import {
   getProduct,
   saveProduct,
@@ -12,8 +13,15 @@ import {
   type ProductDraft,
   type VariantDraft,
 } from "../lib/backoffice-api"
+
 import Gallery from "./Gallery"
+
 import StockPanel from "./StockPanel"
+
+import { VariantStockSummary } from "./StockBadge"
+
+import { variantStockState } from "./stock-status"
+
 import {
   actionClass,
   Check,
@@ -25,43 +33,71 @@ import {
 
 const emptyVariant = (grams = 0): VariantDraft => ({
   sku: "",
+
   weight_grams: grams,
+
   price: "",
+
   is_active: true,
+
   stock_physical: 0,
+
   stock_reserved: 0,
+
   stock_available: 0,
 })
+
 const toDraft = (product: AdminProduct): ProductDraft => ({
   name: product.name,
+
   slug: product.slug,
+
   category: product.category,
+
   description: product.description,
+
   ingredients: product.ingredients,
+
   allergen_info: product.allergen_info,
+
   storage_instructions: product.storage_instructions,
+
   is_published: product.is_published,
+
   is_featured: product.is_featured,
+
   variants: product.variants,
 })
 
 function VariantRow({
   variant,
+
   index,
+
   disabled,
+
   onChange,
+
   onRemove,
+
   onStock,
 }: {
   variant: VariantDraft
+
   index: number
+
   disabled: boolean
+
   onChange: (variant: VariantDraft) => void
+
   onRemove: () => void
+
   onStock: () => void
 }) {
   const [unit, setUnit] = useState("g")
+
   const factor = unit === "kg" ? 1000 : 1
+
   return (
     <fieldset
       className="min-w-0 space-y-4 rounded-card border border-sand/35 bg-cream/70 p-4"
@@ -141,6 +177,7 @@ function VariantRow({
           />
         </Field>
       </div>
+      <VariantStockSummary variant={variant} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Check
           label="Presentación activa"
@@ -149,15 +186,21 @@ function VariantRow({
           disabled={disabled || variant.stock_reserved > 0}
         />
         {variant.id ? (
-          <>
-            <p className="text-sm">
-              Reservado: <strong>{variant.stock_reserved}</strong> · Disponible:{" "}
-              <strong>{variant.stock_available}</strong>
-            </p>
-            <button type="button" className={actionClass} onClick={onStock}>
-              Ajustes e historial
-            </button>
-          </>
+          <button
+            type="button"
+            className={
+              variantStockState(variant) === "out" ||
+              variantStockState(variant) === "low"
+                ? primaryClass
+                : actionClass
+            }
+            onClick={onStock}
+          >
+            {variantStockState(variant) === "out" ||
+            variantStockState(variant) === "low"
+              ? "Reponer stock / Ver historial"
+              : "Ajustes e historial"}
+          </button>
         ) : (
           <button type="button" className={actionClass} onClick={onRemove}>
             Quitar presentación nueva
@@ -176,17 +219,27 @@ function VariantRow({
 
 export default function ProductEditor({
   product,
+
   categories,
+
   onSaved,
+
   onClose,
+
   onDirty,
+
   onBusy,
 }: {
   product: AdminProduct | null
+
   categories: AdminCategory[]
+
   onSaved: (product: AdminProduct) => void
+
   onClose: () => void
+
   onDirty: (dirty: boolean) => void
+
   onBusy: (busy: boolean) => void
 }) {
   const initial: ProductDraft = product
@@ -204,17 +257,29 @@ export default function ProductEditor({
         is_featured: false,
         variants: [],
       }
+
   const [id, setId] = useState(product?.id)
+
   const [draft, setDraft] = useState(initial)
+
   const [baseline, setBaseline] = useState(JSON.stringify(initial))
+
   const [images, setImages] = useState<AdminImage[]>(product?.images || [])
+
   const [pending, setPending] = useState<PendingImage[]>([])
+
   const [stockVariant, setStockVariant] = useState<AdminVariant | null>(null)
+
   const [busy, setBusy] = useState(false)
+
   const [error, setError] = useState("")
+
   const [notice, setNotice] = useState("")
+
   const dirty = baseline !== JSON.stringify(draft) || pending.length > 0
+
   const category = categories.find((item) => item.id === draft.category)
+
   const weights =
     category?.slug === "hierbas" ||
     category?.name.toLowerCase().includes("hierba")
@@ -228,6 +293,7 @@ export default function ProductEditor({
   useEffect(() => {
     onDirty(dirty)
   }, [dirty, onDirty])
+
   useEffect(() => {
     const beforeUnload = (event: BeforeUnloadEvent) => {
       if (dirty) {
@@ -238,12 +304,14 @@ export default function ProductEditor({
     window.addEventListener("beforeunload", beforeUnload)
     return () => window.removeEventListener("beforeunload", beforeUnload)
   }, [dirty])
+
   function setField<K extends keyof ProductDraft>(
     field: K,
     value: ProductDraft[K],
   ) {
     setDraft((current) => ({ ...current, [field]: value }))
   }
+
   function addVariant(grams = 0) {
     const variant = emptyVariant(grams)
     if (grams && draft.slug)

@@ -51,6 +51,7 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 - Never use sample/fallback products in administrative screens or simulate successful writes locally.
 - SKU/price/stock belong to a fixed-weight variant. Convert kg to whole grams; stock quantities count packages.
 - Reserved stock is read-only. Existing physical stock changes only through an adjustment with reason/history.
+- Stock alerts/filters use `backoffice/stock-status.ts`: per active variant, 0 = out, 1–5 = low. Do not hide exhausted weights behind an aggregate or treat no active variants as exhausted. Run `pnpm test` (Node with type stripping) for regression checks.
 - Keep decimal API prices as strings in editors. Do not send reserved or existing physical stock when saving metadata.
 - Gallery supports multiple files/URLs, descriptions, credits and cover/order. New uploads save with the product; existing gallery actions save immediately.
 - Refer to `../docs/backoffice.md` and `../docs/context.md` for current scope. Orders/authentication are not part of stage 1.

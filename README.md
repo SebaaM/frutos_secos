@@ -56,7 +56,8 @@ cd backend
 .\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
 ```
 
-Desde `frontend/`: `node node_modules/typescript/bin/tsc --noEmit` y `pnpm build`.
+Desde `frontend/`: `pnpm test`, `node node_modules/typescript/bin/tsc --noEmit` y `pnpm build`.
+Las pruebas de alertas de stock utilizan el runner de Node con type stripping (Node 22.6+; entorno actual 24).
 Las pruebas Django usan una base temporal; no recargan ni borran el catálogo local.
 
 ## Próximos pasos
