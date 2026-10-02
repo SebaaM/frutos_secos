@@ -41,6 +41,12 @@ Pedidos y autenticación corresponden al segundo plan; no están implementados t
 
 Consultar [operación del backoffice](docs/backoffice.md) y [contexto técnico](docs/context.md).
 
+## Documentación de API
+
+[Swagger local](http://localhost:8443/api/docs/swagger/) con Django y Vite iniciados.
+Contrato [OpenAPI exportado](docs/openapi.yaml) y [guía de integración](docs/api.md).
+Solo desarrollo local; “Try it out” de escrituras modifica datos reales.
+
 ## Verificación
 
 ```powershell

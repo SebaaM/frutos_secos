@@ -1,0 +1,1461 @@
+openapi: 3.0.3
+info:
+  title: Rosana Frutos Secos — API
+  version: 1.0.0
+  description: 'Catálogo público y administración local de productos, categorías,
+    galerías y stock. Precios en ARS como strings decimales; pesos enteros en gramos
+    y stock en paquetes. Pedidos, reservas y autenticación todavía no están implementados.
+    El backoffice y esta documentación requieren DEBUG, BACKOFFICE_ENABLED y cliente
+    local. Las operaciones de escritura de Swagger modifican datos reales: no ejecutarlas
+    como prueba.'
+paths:
+  /api/v1/backoffice/categories/:
+    get:
+      operationId: v1_backoffice_categories_list
+      description: |+
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+      summary: Listar todas las categorías
+      tags:
+      - Backoffice
+      responses:
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminCategory'
+          description: ''
+    post:
+      operationId: v1_backoffice_categories_create
+      description: |+
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+      summary: Crear categoría
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminCategoryRequest'
+            examples:
+              Categoría:
+                value:
+                  name: Hierbas naturales
+                  slug: hierbas-naturales
+                  is_active: true
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AdminCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AdminCategoryRequest'
+        required: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategory'
+          description: ''
+  /api/v1/backoffice/categories/{id}/:
+    get:
+      operationId: v1_backoffice_categories_retrieve
+      description: |+
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+      summary: Consultar categoría
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este category.
+        required: true
+      tags:
+      - Backoffice
+      responses:
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategory'
+          description: ''
+    patch:
+      operationId: v1_backoffice_categories_partial_update
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        No se puede desactivar si tiene productos publicados. No admite DELETE ni PUT.
+      summary: Editar o desactivar categoría
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este category.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCategoryRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCategoryRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminCategoryRequest'
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCategory'
+          description: ''
+  /api/v1/backoffice/images/{id}/:
+    patch:
+      operationId: v1_backoffice_images_partial_update
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Solo alt_text y credit; para reemplazar archivo o URL, agregar una imagen nueva.
+      summary: Editar descripción o crédito de imagen
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product image.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedImageMetadataRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedImageMetadataRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedImageMetadataRequest'
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImage'
+          description: ''
+    delete:
+      operationId: v1_backoffice_images_destroy
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Elimina la referencia, conserva el archivo físico para recuperación manual y normaliza posiciones. No se puede quitar la última imagen de un producto publicado: pasar antes a borrador.
+      summary: Quitar imagen de la galería
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product image.
+        required: true
+      tags:
+      - Backoffice
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '204':
+          description: No response body
+  /api/v1/backoffice/products/:
+    get:
+      operationId: v1_backoffice_products_list
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Incluye borradores, variantes inactivas y galería. Sin paginación; orden por nombre. Los filtros de disponibilidad del panel se aplican en React, no en este endpoint.
+      summary: Listar productos administrativos
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: integer
+        description: ID numérico de categoría existente.
+      - in: query
+        name: published
+        schema:
+          type: string
+          enum:
+          - 'false'
+          - 'true'
+        description: Filtrar por publicación; otros valores no filtran.
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Buscar nombre o SKU, sin distinguir mayúsculas.
+      tags:
+      - Backoffice
+      responses:
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AdminProduct'
+          description: ''
+    post:
+      operationId: v1_backoffice_products_create
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Crear en borrador, cargar imágenes y luego publicar. Para publicar: categoría activa, al menos una imagen y una variante activa con precio positivo. SKU global único; peso único por producto. Productos y variantes se guardan en una transacción. stock_physical solo establece stock inicial de variantes nuevas; el reservado no se escribe.
+      summary: Crear producto con presentaciones
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInputRequest'
+            examples:
+              ProductoEnBorrador:
+                value:
+                  name: Almendras naturales
+                  slug: almendras-naturales-ejemplo
+                  category: 1
+                  description: Presentaciones fijas de almendras.
+                  ingredients: Almendras.
+                  allergen_info: Contiene almendras.
+                  storage_instructions: Conservar en un lugar fresco y seco.
+                  is_published: false
+                  is_featured: false
+                  variants:
+                  - sku: EJ-ALM-250
+                    weight_grams: 250
+                    price: '6300.00'
+                    is_active: true
+                    stock_physical: 10
+                summary: Producto en borrador
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductInputRequest'
+        required: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProduct'
+          description: ''
+  /api/v1/backoffice/products/{id}/:
+    get:
+      operationId: v1_backoffice_products_retrieve
+      description: |+
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+      summary: Consultar producto administrativo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product.
+        required: true
+      tags:
+      - Backoffice
+      responses:
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProduct'
+          description: ''
+    patch:
+      operationId: v1_backoffice_products_partial_update
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Los campos de producto son opcionales en PATCH. Si enviás variants, incluí todas las existentes con id y datos completos (sku, weight_grams, price, is_active); no se eliminan por omisión. Para ocultar: is_published=false o is_active=false. El stock existente solo cambia por adjust-stock. No cambiar peso ni desactivar una variante reservada. No admite DELETE ni PUT.
+      summary: Editar producto y presentaciones
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductInputRequest'
+            examples:
+              PasarABorrador:
+                value:
+                  is_published: false
+                summary: Pasar a borrador
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductInputRequest'
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProduct'
+          description: ''
+  /api/v1/backoffice/products/{id}/images/:
+    post:
+      operationId: v1_backoffice_products_images_create
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Un archivo image por solicitud multipart o image_url en JSON, nunca ambos. alt_text obligatorio. Máximo 10 imágenes por producto; archivos JPEG/PNG/WebP de hasta 5 MiB y 25 megapíxeles. Se agrega al final; posición 0 es portada.
+      summary: Agregar imagen a la galería
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageInputRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageInputRequest'
+            examples:
+              ImagenDesdeURL:
+                value:
+                  image_url: https://images.example.com/almendras.jpg
+                  alt_text: Almendras naturales en un cuenco.
+                  credit: ''
+                summary: Imagen desde URL
+        required: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductImage'
+          description: ''
+  /api/v1/backoffice/products/{id}/reorder-images/:
+    post:
+      operationId: v1_backoffice_products_reorder_images_create
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Enviar todos los IDs de la galería exactamente una vez, en el orden deseado. El primer ID pasa a portada. Devuelve la galería ordenada.
+      summary: Ordenar galería y elegir portada
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImageOrderRequest'
+            examples:
+              OrdenDeGalería:
+                value:
+                  ids:
+                  - 2
+                  - 1
+                summary: Orden de galería
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ImageOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ImageOrderRequest'
+        required: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductImage'
+          description: ''
+  /api/v1/backoffice/variants/{id}/adjust-stock/:
+    post:
+      operationId: v1_backoffice_variants_adjust_stock_create
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        delta entero distinto de 0; reason obligatorio; expected_stock es el físico observado. Si cambió, responde 409. Transacción con bloqueo de filas y movimiento auditado. No modifica reservado ni permite físico negativo o menor al reservado. Disponible = físico − reservado. Cantidades en paquetes, no gramos.
+      summary: Ajustar stock físico con auditoría
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product variant.
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+            examples:
+              IngresoDeCincoPaquetes:
+                value:
+                  delta: 5
+                  reason: Reposición
+                  expected_stock: 10
+                summary: Ingreso de cinco paquetes
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StockAdjustmentRequest'
+        required: true
+      responses:
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: 'Validación: errores por campo, non_field_errors o lista de
+            mensajes.'
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '409':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: expected_stock no coincide con el stock físico actual. Actualizar
+            y reintentar.
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminVariant'
+          description: ''
+  /api/v1/backoffice/variants/{id}/movements/:
+    get:
+      operationId: v1_backoffice_variants_movements_list
+      description: |-
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+
+        Hasta 100 movimientos, más recientes primero. Incluye delta, motivo, físico anterior/resultante y fecha.
+      summary: Consultar historial de stock
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product variant.
+        required: true
+      tags:
+      - Backoffice
+      responses:
+        '403':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: 'Acceso bloqueado: entorno, IP u origen no permitido.'
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: El recurso no existe.
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockMovement'
+          description: ''
+  /api/v1/catalog/categories/:
+    get:
+      operationId: v1_catalog_categories_list
+      description: Lista sin paginación, ordenada por nombre.
+      summary: Listar categorías activas
+      tags:
+      - Catálogo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+          description: ''
+  /api/v1/catalog/categories/{id}/:
+    get:
+      operationId: v1_catalog_categories_retrieve
+      summary: Consultar categoría activa
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este category.
+        required: true
+      tags:
+      - Catálogo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: Categoría inexistente o inactiva.
+  /api/v1/catalog/products/:
+    get:
+      operationId: v1_catalog_products_list
+      description: Lista sin paginación, ordenada por nombre. Solo categorías activas
+        y variantes activas; incluye variantes agotadas y galería ordenada por posición.
+      summary: Listar productos publicados
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Slug de categoría; por ejemplo frutos-secos.
+      - in: query
+        name: featured
+        schema:
+          type: string
+          enum:
+          - 'true'
+        description: El valor literal true limita a destacados. Otros valores no filtran.
+      tags:
+      - Catálogo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+          description: ''
+  /api/v1/catalog/products/{id}/:
+    get:
+      operationId: v1_catalog_products_retrieve
+      summary: Consultar producto publicado
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Un valor de entero único que identifique este product.
+        required: true
+      tags:
+      - Catálogo
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+                required:
+                - detail
+          description: Producto inexistente, en borrador o con categoría inactiva.
+  /api/v1/health/:
+    get:
+      operationId: v1_health_retrieve
+      description: Devuelve ok cuando Django responde; no comprueba la conexión a
+        la base de datos.
+      summary: Comprobar disponibilidad del servicio
+      tags:
+      - Sistema
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Health'
+              examples:
+                ServicioDisponible:
+                  value:
+                    status: ok
+                  summary: Servicio disponible
+          description: ''
+components:
+  schemas:
+    AdminCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_active:
+          type: boolean
+      required:
+      - id
+      - name
+      - slug
+    AdminCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_active:
+          type: boolean
+      required:
+      - name
+      - slug
+    AdminProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        category:
+          type: integer
+        description:
+          type: string
+        ingredients:
+          type: string
+        allergen_info:
+          type: string
+        storage_instructions:
+          type: string
+        is_published:
+          type: boolean
+        is_featured:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminVariant'
+          readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category
+      - id
+      - images
+      - name
+      - slug
+      - updated_at
+      - variants
+    AdminVariant:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sku:
+          type: string
+          readOnly: true
+        weight_grams:
+          type: integer
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          readOnly: true
+        is_active:
+          type: boolean
+          readOnly: true
+        stock_physical:
+          type: integer
+          readOnly: true
+        stock_reserved:
+          type: integer
+          readOnly: true
+        stock_available:
+          type: integer
+          readOnly: true
+      required:
+      - id
+      - is_active
+      - price
+      - sku
+      - stock_available
+      - stock_physical
+      - stock_reserved
+      - weight_grams
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 80
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+      required:
+      - id
+      - name
+      - slug
+    Health:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+      required:
+      - status
+    ImageInputRequest:
+      type: object
+      properties:
+        image:
+          type: string
+          format: binary
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        alt_text:
+          type: string
+          minLength: 1
+          maxLength: 255
+        credit:
+          type: string
+          maxLength: 160
+      required:
+      - alt_text
+    ImageOrderRequest:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 10
+      required:
+      - ids
+    PatchedAdminCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_active:
+          type: boolean
+    PatchedImageMetadataRequest:
+      type: object
+      properties:
+        alt_text:
+          type: string
+          minLength: 1
+          maxLength: 255
+        credit:
+          type: string
+          maxLength: 160
+    PatchedProductInputRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        category:
+          type: integer
+        description:
+          type: string
+        ingredients:
+          type: string
+        allergen_info:
+          type: string
+        storage_instructions:
+          type: string
+        is_published:
+          type: boolean
+        is_featured:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantInputRequest'
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 160
+        slug:
+          type: string
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        ingredients:
+          type: string
+        allergen_info:
+          type: string
+        storage_instructions:
+          type: string
+        image_url:
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+          readOnly: true
+        is_featured:
+          type: boolean
+        category:
+          allOf:
+          - $ref: '#/components/schemas/Category'
+          readOnly: true
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+          readOnly: true
+      required:
+      - category
+      - id
+      - images
+      - name
+      - slug
+      - variants
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        image_url:
+          type: string
+          format: uri
+          readOnly: true
+        alt_text:
+          type: string
+          maxLength: 255
+        credit:
+          type: string
+          maxLength: 160
+        position:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+      required:
+      - alt_text
+      - id
+      - image_url
+    ProductInputRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 160
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 50
+          pattern: ^[-a-zA-Z0-9_]+$
+        category:
+          type: integer
+        description:
+          type: string
+        ingredients:
+          type: string
+        allergen_info:
+          type: string
+        storage_instructions:
+          type: string
+        is_published:
+          type: boolean
+        is_featured:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/VariantInputRequest'
+      required:
+      - category
+      - name
+      - slug
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        sku:
+          type: string
+          maxLength: 64
+        weight_grams:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        stock_available:
+          type: integer
+          readOnly: true
+        availability:
+          type: string
+          readOnly: true
+      required:
+      - availability
+      - id
+      - price
+      - sku
+      - stock_available
+      - weight_grams
+    StatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
+    StockAdjustmentRequest:
+      type: object
+      properties:
+        delta:
+          type: integer
+          maximum: 2147483647
+          minimum: -2147483647
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 255
+        expected_stock:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - delta
+      - expected_stock
+      - reason
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        variant:
+          type: integer
+        delta:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        previous_stock:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        resulting_stock:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        reason:
+          type: string
+          maxLength: 255
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - delta
+      - id
+      - previous_stock
+      - reason
+      - resulting_stock
+      - variant
+    VariantInputRequest:
+      type: object
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 64
+        weight_grams:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        is_active:
+          type: boolean
+          default: true
+        stock_physical:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+      required:
+      - price
+      - sku
+      - weight_grams
+tags:
+- name: Sistema
+  description: Disponibilidad del servicio; no comprueba conexión a la base.
+- name: Catálogo
+  description: Lectura pública de productos publicados y categorías activas.
+- name: Backoffice
+  description: Solo desarrollo local, sin autenticación todavía.

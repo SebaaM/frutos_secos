@@ -18,6 +18,20 @@ Endpoints iniciales:
 - `GET /api/v1/catalog/products/`
 - `GET /api/v1/catalog/products/?category=frutos-secos`
 
+## OpenAPI y Swagger
+
+Con Django y Vite en ejecución, abrir [Swagger UI](http://localhost:8443/api/docs/swagger/).
+Esquema en `/api/schema/` (YAML) o `/api/schema/?format=json`; copia versionada en
+[`docs/openapi.yaml`](../docs/openapi.yaml). Incluye catálogo, galería, categorías y stock.
+Swagger usa assets locales y respeta el mismo acceso exclusivo de desarrollo que el backoffice.
+“Try it out” puede modificar datos reales: probar escrituras solo en una base de pruebas.
+
+```powershell
+.\.venv\Scripts\python.exe manage.py spectacular --file ../docs/openapi.yaml --validate --fail-on-warn
+```
+
+Regenerar al cambiar endpoints o serializers. Ver [guía de API](../docs/api.md).
+
 ## Backoffice de catálogo
 
 Administración en `/api/v1/backoffice/`, conectada al panel React `/backoffice`.

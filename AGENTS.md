@@ -18,6 +18,8 @@
 ## Convenciones de desarrollo
 
 - Mantener frontend y backend desacoplados por API; no acoplar componentes React a detalles internos de Django.
+- Documentar nuevos endpoints/cambios con drf-spectacular; regenerar `docs/openapi.yaml` con `spectacular --validate --fail-on-warn`, nunca editarlo a mano. Referencia: `docs/api.md`.
+- No publicar endpoints de pedidos/autenticación pendientes en el esquema. Swagger y esquema conservan el guard exclusivo de desarrollo local; los ejemplos de escritura modifican datos reales.
 - Guardar secretos y números reales de WhatsApp solo en variables de entorno, nunca en archivos versionados.
 - Para importes, usar `Decimal` o enteros en unidades menores en backend; nunca `float`.
 - Mantener la experiencia mobile-first y controles accesibles de al menos 44 × 44 px.

@@ -10,6 +10,9 @@
 - `backend/`: Django 5.2 LTS y Django REST Framework; PostgreSQL mediante `DATABASE_URL`.
 - SQLite se usa solo como arranque local cuando no se configura `DATABASE_URL`.
 - `docs/backoffice.md`: fuente de verdad del alcance y operación de la etapa 1.
+- `docs/api.md`: guía de integración; `docs/openapi.yaml`: contrato OpenAPI 3.0.3 generado desde DRF.
+- Swagger local en `/api/docs/swagger/`, esquema dinámico `/api/schema/` (YAML o `?format=json`).
+  drf-spectacular y sidecar sirven assets locales, sin CDN; documentación protegida por el guard local.
 
 React y Django se comunican por API, sin compartir modelos internos. La navegación actual
 usa History API; no se agregó un router ni otro framework de UI.
@@ -39,7 +42,7 @@ sin reemplazar datos ni ejecutar fixtures. El catálogo local existente conserva
 
 - Django: `http://127.0.0.1:8000`.
 - Vite: `http://localhost:8443` o `http://127.0.0.1:8443`.
-- `VITE_API_BASE_URL` predeterminado: `/api/v1`; Vite redirige `/api` y `/media` a Django.
+- `VITE_API_BASE_URL` predeterminado: `/api/v1`; Vite redirige `/api`, `/media` y `/static` a Django.
 - `BACKOFFICE_ENABLED=true` solo tiene efecto con DEBUG y cliente local; no habilita producción.
 - Archivos en `backend/media/`, excluidos de Git. Pillow verifica las imágenes subidas.
 - Para el catálogo administrado, usar el servidor de desarrollo de Vite, no `vite preview`

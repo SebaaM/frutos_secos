@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from drf_spectacular.utils import extend_schema_field
 
 from .models import Category, Product, ProductImage, ProductVariant
 
@@ -21,6 +22,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
 
+    @extend_schema_field(serializers.URLField())
     def get_image_url(self, obj):
         if obj.image:
             request = self.context.get("request")
@@ -54,5 +56,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "variants",
         ]
 
+    @extend_schema_field(ProductVariantSerializer(many=True))
     def get_variants(self, product):
         return ProductVariantSerializer(product.variants.filter(is_active=True), many=True).data

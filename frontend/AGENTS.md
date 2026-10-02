@@ -46,7 +46,7 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 ## Backoffice conventions
 
 - Use existing tokens and accessible controls of at least 44 px; no separate UI framework.
-- API default `/api/v1`; Vite proxies `/api` and `/media` to Django on 127.0.0.1:8000.
+- API default `/api/v1`; Vite proxies `/api`, `/media` and `/static` to Django on 127.0.0.1:8000. Local Swagger UI: `/api/docs/swagger/`.
 - Preserve the proxy client-IP header and local-only API checks until authentication is implemented.
 - Never use sample/fallback products in administrative screens or simulate successful writes locally.
 - SKU/price/stock belong to a fixed-weight variant. Convert kg to whole grams; stock quantities count packages.
