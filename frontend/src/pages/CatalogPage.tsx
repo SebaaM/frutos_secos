@@ -1,21 +1,28 @@
 import { ProductCard } from "../components/product"
 import { CategoryChip, Eyebrow } from "../components/ui"
-import { categoryLabels, products, type Category } from "../data/products"
+import type { Product } from "../data/products"
+import type { CatalogCategory } from "../lib/catalog-api"
 import type { Navigate } from "../components/layout"
 
-type Filter = "all" | Category
+type Filter = "all" | string
 
 export default function CatalogPage({
   navigate,
   search,
+  products,
+  categories,
+  catalogError,
 }: {
   navigate: Navigate
   search: string
+  products: Product[]
+  categories: CatalogCategory[]
+  catalogError: string
 }) {
   const requested = new URLSearchParams(search).get("categoria")
   const active: Filter =
-    requested && Object.keys(categoryLabels).includes(requested)
-      ? requested as Category
+    requested && categories.some((category) => category.slug === requested)
+      ? requested
       : "all"
   const filtered =
     active === "all"
@@ -47,17 +54,26 @@ export default function CatalogPage({
           >
             Todos
           </CategoryChip>
-          {(Object.keys(categoryLabels) as Category[]).map((category) => (
+          {categories.map((category) => (
             <CategoryChip
-              key={category}
-              active={active === category}
-              onClick={() => setFilter(category)}
+              key={category.id}
+              active={active === category.slug}
+              onClick={() => setFilter(category.slug)}
             >
-              {categoryLabels[category]}
+              {category.name}
             </CategoryChip>
           ))}
         </div>
       </div>
+
+      {catalogError ? (
+        <p
+          role="status"
+          className="mb-6 rounded-control bg-terracotta-soft px-4 py-3 text-sm font-semibold text-charcoal/75"
+        >
+          {catalogError}
+        </p>
+      ) : null}
 
       <div className="mb-5 flex items-center justify-between">
         <p className="text-sm font-semibold text-charcoal/65">

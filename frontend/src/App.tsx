@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { AppShell } from "./components/layout"
 import { Button, Icon, Toast } from "./components/ui"
-import { products, type Product, type ProductVariant } from "./data/products"
+import {
+  categoryLabels,
+  products as exampleProducts,
+  type Product,
+  type ProductVariant,
+} from "./data/products"
+import { fetchCatalog, type CatalogCategory } from "./lib/catalog-api"
 import CartPage, {
   type CartLine,
   type DeliveryMethod,
@@ -18,27 +24,39 @@ const CART_KEY = "rosana-cart-v1"
 const ORDER_KEY = "rosana-last-order-v1"
 const ORDER_HISTORY_KEY = "rosana-order-history-v1"
 
-function readCart(): CartLine[] {
+function normalizeCart(value: unknown, products: Product[]): CartLine[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((line) => {
+      const product = products.find((item) => item.id === line.productId)
+      const variant = product?.variants.find(
+        (item) => item.id === line.variantId,
+      )
+      if (!product || !variant || variant.stock <= 0) return null
+      const quantity = Math.max(
+        1,
+        Math.min(Number(line.quantity) || 1, variant.stock),
+      )
+      return { productId: product.id, variantId: variant.id, quantity }
+    })
+    .filter((line): line is CartLine => Boolean(line))
+}
+
+function readCart(products: Product[]): CartLine[] {
   try {
     const stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]")
-    if (!Array.isArray(stored)) return []
-    return stored
-      .map((line) => {
-        const product = products.find((item) => item.id === line.productId)
-        const variant = product?.variants.find(
-          (item) => item.id === line.variantId,
-        )
-        if (!product || !variant || variant.stock <= 0) return null
-        const quantity = Math.max(
-          1,
-          Math.min(Number(line.quantity) || 1, variant.stock),
-        )
-        return { productId: product.id, variantId: variant.id, quantity }
-      })
-      .filter((line): line is CartLine => Boolean(line))
+    return normalizeCart(stored, products)
   } catch {
     return []
   }
+}
+
+function exampleCategories(): CatalogCategory[] {
+  return Object.entries(categoryLabels).map(([slug, name]) => ({
+    id: slug,
+    slug,
+    name,
+  }))
 }
 
 function readOrder(): Order | null {
@@ -66,7 +84,10 @@ export default function App() {
     path: window.location.pathname,
     search: window.location.search,
   }))
-  const [cart, setCart] = useState<CartLine[]>(readCart)
+  const [products, setProducts] = useState<Product[]>(exampleProducts)
+  const [categories, setCategories] = useState<CatalogCategory[]>(exampleCategories)
+  const [catalogError, setCatalogError] = useState("")
+  const [cart, setCart] = useState<CartLine[]>(() => readCart(exampleProducts))
   const [lastOrder, setLastOrder] = useState<Order | null>(readOrder)
   const [orderHistory, setOrderHistory] = useState<Order[]>(readOrderHistory)
   const [toast, setToast] = useState("")
@@ -80,6 +101,32 @@ export default function App() {
     window.addEventListener("popstate", onPopState)
     return () => window.removeEventListener("popstate", onPopState)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void fetchCatalog()
+      .then((catalog) => {
+        if (cancelled) return
+        setProducts(catalog.products)
+        setCategories(catalog.categories)
+        setCatalogError("")
+      })
+      .catch(() => {
+        if (cancelled) return
+        setCatalogError(
+          "No pudimos actualizar el catálogo. Mostramos los productos de ejemplo.",
+        )
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    setCart((current) => normalizeCart(current, products))
+  }, [products])
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(cart))
@@ -266,14 +313,27 @@ export default function App() {
 
   let page
   if (location.path === "/") {
-    page = <HomePage navigate={navigate} />
+    page = <HomePage navigate={navigate} products={products} categories={categories} />
   } else if (location.path === "/catalogo") {
-    page = <CatalogPage navigate={navigate} search={location.search} />
+    page = (
+      <CatalogPage
+        navigate={navigate}
+        search={location.search}
+        products={products}
+        categories={categories}
+        catalogError={catalogError}
+      />
+    )
   } else if (location.path.startsWith("/producto/")) {
     const slug = decodeURIComponent(location.path.replace("/producto/", ""))
     const product = products.find((item) => item.slug === slug)
     page = product ? (
-      <ProductPage product={product} navigate={navigate} onAdd={addToCart} />
+      <ProductPage
+        product={product}
+        products={products}
+        navigate={navigate}
+        onAdd={addToCart}
+      />
     ) : (
       <NotFound navigate={navigate} />
     )
