@@ -8,6 +8,7 @@ import {
   type ProductVariant,
 } from "./data/products"
 import { fetchCatalog, type CatalogCategory } from "./lib/catalog-api"
+import BackofficePage from "./backoffice/BackofficePage"
 import CartPage, {
   type CartLine,
   type DeliveryMethod,
@@ -42,10 +43,13 @@ function normalizeCart(value: unknown, products: Product[]): CartLine[] {
     .filter((line): line is CartLine => Boolean(line))
 }
 
-function readCart(products: Product[]): CartLine[] {
+function readCart(): CartLine[] {
   try {
     const stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]")
-    return normalizeCart(stored, products)
+    return Array.isArray(stored) ? stored.filter(line =>
+      typeof line?.productId === "string" && typeof line?.variantId === "string"
+      && Number.isInteger(line.quantity) && line.quantity > 0,
+    ) : []
   } catch {
     return []
   }
@@ -87,10 +91,12 @@ export default function App() {
   const [products, setProducts] = useState<Product[]>(exampleProducts)
   const [categories, setCategories] = useState<CatalogCategory[]>(exampleCategories)
   const [catalogError, setCatalogError] = useState("")
-  const [cart, setCart] = useState<CartLine[]>(() => readCart(exampleProducts))
+  const [cart, setCart] = useState<CartLine[]>(readCart)
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
   const [lastOrder, setLastOrder] = useState<Order | null>(readOrder)
   const [orderHistory, setOrderHistory] = useState<Order[]>(readOrderHistory)
   const [toast, setToast] = useState("")
+  const isBackoffice = location.path === "/backoffice" || location.path.startsWith("/backoffice/")
 
   useEffect(() => {
     const onPopState = () =>
@@ -103,6 +109,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    if (isBackoffice) return
     let cancelled = false
 
     void fetchCatalog()
@@ -111,22 +118,23 @@ export default function App() {
         setProducts(catalog.products)
         setCategories(catalog.categories)
         setCatalogError("")
+        setCatalogLoaded(true)
       })
       .catch(() => {
         if (cancelled) return
         setCatalogError(
-          "No pudimos actualizar el catálogo. Mostramos los productos de ejemplo.",
+          "No pudimos actualizar el catálogo. Mostramos la última información disponible; confirmá disponibilidad por WhatsApp.",
         )
       })
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isBackoffice])
 
   useEffect(() => {
-    setCart((current) => normalizeCart(current, products))
-  }, [products])
+    if (catalogLoaded) setCart((current) => normalizeCart(current, products))
+  }, [products, catalogLoaded])
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(cart))
@@ -176,7 +184,7 @@ export default function App() {
           },
         ]
       }),
-    [cart],
+    [cart, products],
   )
   const subtotal = resolvedLines.reduce(
     (total, line) => total + line.subtotal,
@@ -310,6 +318,8 @@ export default function App() {
     setToast("El pedido se agregó nuevamente al carrito.")
     navigate("/carrito")
   }
+
+  if (isBackoffice) return <BackofficePage navigate={navigate} />
 
   let page
   if (location.path === "/") {

@@ -1,8 +1,14 @@
 from decimal import Decimal
+from uuid import uuid4
 
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Q
+
+
+def product_image_path(instance, filename):
+    extension = filename.rsplit(".", 1)[-1].lower()
+    return f"products/{instance.product_id}/{uuid4().hex}.{extension}"
 
 
 class Category(models.Model):
@@ -25,6 +31,7 @@ class Product(models.Model):
     description = models.TextField(blank=True)
     ingredients = models.TextField(blank=True)
     allergen_info = models.TextField(blank=True)
+    storage_instructions = models.TextField(blank=True)
     image_url = models.URLField(blank=True)
     is_published = models.BooleanField(default=False)
     is_featured = models.BooleanField(default=False)
@@ -50,6 +57,8 @@ class ProductVariant(models.Model):
     class Meta:
         ordering = ["weight_grams"]
         constraints = [
+            models.UniqueConstraint(fields=["product", "weight_grams"], name="variant_unique_weight"),
+            models.CheckConstraint(condition=Q(weight_grams__gt=0), name="variant_positive_weight"),
             models.CheckConstraint(
                 condition=Q(stock_reserved__lte=F("stock_physical")),
                 name="variant_reserved_not_gt_physical",
@@ -76,7 +85,8 @@ class ProductImage(models.Model):
     """An ordered gallery image. The first image is the product cover by convention."""
 
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="images")
-    image_url = models.URLField()
+    image_url = models.URLField(blank=True)
+    image = models.ImageField(upload_to=product_image_path, blank=True)
     alt_text = models.CharField(max_length=255)
     credit = models.CharField(max_length=160, blank=True)
     position = models.PositiveSmallIntegerField(default=0)
@@ -92,3 +102,15 @@ class ProductImage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.product.name} · imagen {self.position + 1}"
+
+
+class StockMovement(models.Model):
+    variant = models.ForeignKey(ProductVariant, on_delete=models.PROTECT, related_name="stock_movements")
+    delta = models.IntegerField()
+    previous_stock = models.PositiveIntegerField()
+    resulting_stock = models.PositiveIntegerField()
+    reason = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-id"]

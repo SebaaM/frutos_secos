@@ -1,3 +1,6 @@
 # Documentación
 
-Aquí se consolidarán la definición de marca, reglas de inventario, decisiones de arquitectura y especificaciones de interfaz a medida que se implementen.
+Decisiones y documentación del proyecto:
+
+- [Contexto técnico y próximos pasos](context.md)
+- [Backoffice de catálogo: operación, imágenes, stock y API](backoffice.md)

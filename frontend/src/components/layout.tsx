@@ -115,20 +115,21 @@ export function AppShell({
             </NavLink>
           </nav>
           <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              icon="whatsapp"
-              className="hidden lg:inline-flex"
-              onClick={() =>
-                window.open(
-                  "https://wa.me/?text=Hola%2C%20quiero%20hacer%20una%20consulta%20a%20Rosana.",
-                  "_blank",
-                  "noopener,noreferrer",
-                )
-              }
-            >
-              WhatsApp
-            </Button>
+            <div className="hidden lg:block">
+              <Button
+                variant="secondary"
+                icon="whatsapp"
+                onClick={() =>
+                  window.open(
+                    "https://wa.me/?text=Hola%2C%20quiero%20hacer%20una%20consulta%20a%20Rosana.",
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+              >
+                WhatsApp
+              </Button>
+            </div>
             <button
               type="button"
               onClick={() => go("/carrito")}

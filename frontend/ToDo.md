@@ -51,7 +51,7 @@ Este documento reúne las mejoras sugeridas para convertir el prototipo actual e
 - [ ] Explicar qué ocurre cuando una variante se agota después de agregarla al carrito.
 - [ ] Mantener visible el CTA principal en mobile sin cubrir contenido.
 - [ ] Permitir compartir el enlace de un producto.
-- [ ] Evaluar una segunda fotografía por producto.
+- [x] Permitir múltiples fotografías por producto, portada y orden desde el backoffice.
 - [ ] Revisar que todas las imágenes tengan texto alternativo específico.
 
 ### Carrito
@@ -90,11 +90,11 @@ Este documento reúne las mejoras sugeridas para convertir el prototipo actual e
 
 ### Backend
 
-- [ ] Elegir un backend; Supabase es una opción adecuada para el alcance actual.
+- [x] Backend definido: Django + Django REST Framework, PostgreSQL y SQLite solo para arranque local.
 - [ ] Crear una tabla de pedidos.
 - [ ] Crear una tabla de líneas de pedido.
 - [ ] Crear una tabla o vista de estados e historial.
-- [ ] Centralizar productos, variantes, precios y stock.
+- [x] Centralizar productos, variantes, precios y stock; catálogo público y backoffice conectados por API.
 - [ ] Guardar fecha de creación y última actualización.
 - [ ] Implementar políticas de seguridad para aislar los pedidos de cada cliente.
 - [ ] Evitar guardar datos personales sensibles en `localStorage`.
@@ -118,7 +118,7 @@ Este documento reúne las mejoras sugeridas para convertir el prototipo actual e
 ### Cuenta temporal
 
 - [ ] Reemplazar el acceso local por una sesión temporal real.
-- [ ] Evaluar acceso mediante enlace enviado por email.
+- [x] Definir acceso mediante enlace enviado por email, sin contraseña (implementación pendiente de etapa 2).
 - [ ] Evaluar código de seis dígitos con vencimiento.
 - [ ] Implementar enlaces firmados y de duración limitada.
 - [ ] Permitir consultar pedidos desde diferentes dispositivos.
@@ -146,7 +146,12 @@ Este documento reúne las mejoras sugeridas para convertir el prototipo actual e
 
 ## 5. Panel interno para Rosana
 
-- [ ] Crear un acceso administrativo independiente.
+- [x] Crear panel de catálogo independiente en `/backoffice`, solo local sin autenticación.
+- [x] Alta/edición de productos, categorías y presentaciones por peso fijo.
+- [x] Imágenes múltiples con archivos/URLs, descripción, crédito, portada y orden.
+- [x] Ajustes auditados de stock físico, reservado de solo lectura.
+- [ ] Autenticación de operadores y protección del backoffice en producción (etapa 2).
+- [ ] Tablero móvil con “Próximos” por antigüedad, sin agenda ni franjas horarias (etapa 2).
 - [ ] Mostrar pedidos nuevos y pendientes.
 - [ ] Permitir buscar por número, nombre, teléfono o email.
 - [ ] Permitir cambiar el estado del pedido.

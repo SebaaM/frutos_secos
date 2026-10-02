@@ -128,7 +128,7 @@ export default function HomePage({
             </h2>
           </div>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-charcoal/65 md:mt-0">
-            Tres categorías, una misma forma simple de comprar.
+            Distintas categorías, una misma forma simple de comprar.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-3">

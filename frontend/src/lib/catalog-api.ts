@@ -1,14 +1,10 @@
 import {
-  categoryLabels,
   type Category,
   type Product,
   type ProductImage,
   type ProductVariant,
 } from "../data/products"
-
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/api/v1"
-).replace(/\/$/, "")
+import { apiRequest } from "./api"
 
 export type CatalogCategory = {
   id: string
@@ -39,6 +35,7 @@ type ApiProduct = {
   description: string
   ingredients: string
   allergen_info: string
+  storage_instructions?: string
   image_url: string
   is_featured: boolean
   category: { id: number; slug: string; name: string }
@@ -76,6 +73,7 @@ function toFrontendProduct(product: ApiProduct): Product {
     id: String(product.id),
     slug: product.slug,
     category: product.category.slug as Category,
+    categoryName: product.category.name,
     name: product.name,
     description: product.description,
     image: cover?.url || product.image_url,
@@ -84,20 +82,10 @@ function toFrontendProduct(product: ApiProduct): Product {
     images,
     ingredients: product.ingredients,
     allergens: product.allergen_info,
-    storage: "Conservar en un lugar fresco, seco y protegido de la luz.",
+    storage: product.storage_instructions || "Conservar en un lugar fresco, seco y protegido de la luz.",
     featured: product.is_featured,
     variants: product.variants.map(toFrontendVariant),
   }
-}
-
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { Accept: "application/json" },
-  })
-  if (!response.ok) {
-    throw new Error(`La API respondió con ${response.status}.`)
-  }
-  return response.json() as Promise<T>
 }
 
 export async function fetchCatalog(): Promise<{
@@ -105,8 +93,8 @@ export async function fetchCatalog(): Promise<{
   categories: CatalogCategory[]
 }> {
   const [products, categories] = await Promise.all([
-    getJson<ApiProduct[]>("/catalog/products/"),
-    getJson<CatalogCategory[]>("/catalog/categories/"),
+    apiRequest<ApiProduct[]>("/catalog/products/"),
+    apiRequest<CatalogCategory[]>("/catalog/categories/"),
   ])
 
   return {
@@ -114,8 +102,6 @@ export async function fetchCatalog(): Promise<{
     categories: categories.map((category) => ({
       ...category,
       id: String(category.id),
-      name:
-        categoryLabels[category.slug as Category] || category.name,
     })),
   }
 }
