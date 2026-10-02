@@ -1,12 +1,13 @@
-# figma-make-app
+# Frontend — Rosana Frutos Secos
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+React + Vite + Tailwind CSS project imported from Figma Make into the local monorepo.
 
 ## Development Server
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+Start with `pnpm dev` after installing dependencies. The default port is 8443.
+Check for an existing server before starting another one; do not assume one is running.
 
-- Preview URL: The user can access the running app through the preview panel
+- Local URL: `http://localhost:8443`; administration: `/backoffice`
 - Hot reload: Changes to source files are reflected immediately
 
 ## Project Structure
@@ -15,6 +16,8 @@ This is the canonical project structure. Start with task-relevant files below. O
 
 - `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
 - `src/App.tsx` - Primary application component and the usual starting point for UI work
+- `src/backoffice/` - Administrative catalog, category, image and stock screens
+- `src/lib/api.ts` and `src/lib/backoffice-api.ts` - Shared requests and administrative API contracts
 - `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
 - `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
 - `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
@@ -39,3 +42,16 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 - Use double quotes for strings containing apostrophes (`"We're here to help"`), or escape them in single-quoted strings. An unescaped apostrophe in a single-quoted string breaks the build.
 - Ensure JSX tags are closed and braces are balanced.
 - Export components as default exports.
+
+## Backoffice conventions
+
+- Use existing tokens and accessible controls of at least 44 px; no separate UI framework.
+- API default `/api/v1`; Vite proxies `/api` and `/media` to Django on 127.0.0.1:8000.
+- Preserve the proxy client-IP header and local-only API checks until authentication is implemented.
+- Never use sample/fallback products in administrative screens or simulate successful writes locally.
+- SKU/price/stock belong to a fixed-weight variant. Convert kg to whole grams; stock quantities count packages.
+- Reserved stock is read-only. Existing physical stock changes only through an adjustment with reason/history.
+- Keep decimal API prices as strings in editors. Do not send reserved or existing physical stock when saving metadata.
+- Gallery supports multiple files/URLs, descriptions, credits and cover/order. New uploads save with the product; existing gallery actions save immediately.
+- Refer to `../docs/backoffice.md` and `../docs/context.md` for current scope. Orders/authentication are not part of stage 1.
+- Validate with `node node_modules/typescript/bin/tsc --noEmit` and `pnpm build`.

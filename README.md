@@ -29,8 +29,33 @@ Vite inicia en `http://localhost:8443`. Para validar la compilación sin levanta
 pnpm build
 ```
 
+## Backoffice de catálogo
+
+Con Django y Vite iniciados, abrir `http://localhost:8443/backoffice`.
+Incluye productos, categorías, variantes por peso, múltiples imágenes y ajustes de stock con historial.
+El catálogo público refleja los cambios al volver a la tienda.
+
+Acceso temporal **sin autenticación, exclusivamente local**: DEBUG y BACKOFFICE_ENABLED deben
+estar habilitados. La API administrativa está bloqueada en producción y para conexiones remotas.
+Pedidos y autenticación corresponden al segundo plan; no están implementados todavía.
+
+Consultar [operación del backoffice](docs/backoffice.md) y [contexto técnico](docs/context.md).
+
+## Verificación
+
+```powershell
+cd backend
+.\.venv\Scripts\python.exe manage.py test
+.\.venv\Scripts\python.exe manage.py check
+.\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+```
+
+Desde `frontend/`: `node node_modules/typescript/bin/tsc --noEmit` y `pnpm build`.
+Las pruebas Django usan una base temporal; no recargan ni borran el catálogo local.
+
 ## Próximos pasos
 
 1. Crear pedidos, movimientos de inventario y reservas de stock en el backend.
-2. Reemplazar los datos de ejemplo del frontend por la API.
-3. Configurar PostgreSQL, el número de WhatsApp y las variables reales fuera de Git.
+2. Implementar autenticación del backoffice y acceso del cliente por enlace de email sin contraseña.
+3. Tablero móvil: pedidos a confirmar, próximos por antigüedad, listos, en reparto y entregados.
+4. Configurar PostgreSQL, el número de WhatsApp y las variables reales fuera de Git.
