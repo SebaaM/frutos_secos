@@ -15,6 +15,8 @@ import ProductEditor from "./ProductEditor"
 
 import StockBadge from "./StockBadge"
 
+import OrdersBoard from "./OrdersBoard"
+
 import {
   matchesStockFilter,
   productStock,
@@ -31,8 +33,12 @@ import {
 
 export default function BackofficePage({
   navigate,
+
+  logout,
 }: {
   navigate: (path: string) => void
+
+  logout: () => Promise<void>
 }) {
   const [products, setProducts] = useState<AdminProduct[]>([])
 
@@ -44,10 +50,11 @@ export default function BackofficePage({
 
   const [notice, setNotice] = useState("")
 
-  const [tab, setTab] = useState("products")
+  const [tab, setTab] = useState("orders")
 
   const [editor, setEditor] = useState<{
     key: string
+
     product: AdminProduct | null
   } | null>(null)
 
@@ -65,13 +72,18 @@ export default function BackofficePage({
 
   const reload = useCallback(async () => {
     setLoading(true)
+
     setError("")
+
     try {
       const [newProducts, newCategories] = await Promise.all([
         listProducts(),
+
         listCategories(),
       ])
+
       setProducts(newProducts)
+
       setCategories(newCategories)
     } catch (error) {
       setError((error as Error).message)
@@ -97,17 +109,24 @@ export default function BackofficePage({
   function changeTab(next: string) {
     if (mayLeave()) {
       setEditor(null)
+
       setDirty(false)
+
       setTab(next)
+
       setNotice("")
+
       void reload()
     }
   }
 
   function openEditor(product: AdminProduct | null) {
     setEditor({ key: crypto.randomUUID(), product })
+
     setDirty(false)
+
     setNotice("")
+
     window.scrollTo({ top: 0 })
   }
 
@@ -129,6 +148,7 @@ export default function BackofficePage({
 
   const filtered = products.filter((product) => {
     const query = search.trim().toLocaleLowerCase("es")
+
     return (
       (!query ||
         product.name.toLocaleLowerCase("es").includes(query) ||
@@ -159,8 +179,11 @@ export default function BackofficePage({
 
   function showStock(filter: string) {
     setSearch("")
+
     setCategory("")
+
     setPublished("")
+
     setStock(filter)
   }
 
@@ -182,7 +205,7 @@ export default function BackofficePage({
               </span>
             </p>
             <p className="text-xs text-charcoal/65">
-              Administración de catálogo
+              Catálogo, inventario y pedidos
             </p>
           </div>
           <button
@@ -194,6 +217,21 @@ export default function BackofficePage({
           >
             Ver tienda
           </button>
+          <button
+            className={actionClass}
+            disabled={saving}
+            onClick={async () => {
+              if (!mayLeave()) return
+
+              try {
+                await logout()
+              } catch (error) {
+                setError((error as Error).message)
+              }
+            }}
+          >
+            Cerrar sesión
+          </button>
         </div>
       </header>
       <main
@@ -201,11 +239,21 @@ export default function BackofficePage({
         tabIndex={-1}
         className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-9"
       >
-        <Notice message="Acceso temporal sin autenticación: solo para desarrollo local. No habilitar este panel en producción." />
+        <p className="text-xs text-charcoal/65">
+          Sesión de operador · entorno local
+        </p>
         <nav
           className="flex flex-wrap gap-2"
           aria-label="Secciones del backoffice"
         >
+          <button
+            className={tab === "orders" ? primaryClass : actionClass}
+            disabled={saving}
+            onClick={() => changeTab("orders")}
+            aria-current={tab === "orders" ? "page" : undefined}
+          >
+            Pedidos
+          </button>
           <button
             className={tab === "products" ? primaryClass : actionClass}
             disabled={saving}
@@ -234,9 +282,15 @@ export default function BackofficePage({
             Reintentar conexión
           </button>
         )}
-        {loading && <p role="status">Cargando catálogo administrativo…</p>}
+        {tab === "orders" && (
+          <OrdersBoard onDirty={setDirty} onBusy={setSaving} />
+        )}
+        {loading && tab !== "orders" && (
+          <p role="status">Cargando catálogo administrativo…</p>
+        )}
         {!loading &&
           !error &&
+          tab !== "orders" &&
           (editor ? (
             <ProductEditor
               key={editor.key}
@@ -248,7 +302,9 @@ export default function BackofficePage({
               onClose={() => {
                 if (mayLeave()) {
                   setEditor(null)
+
                   setDirty(false)
+
                   void reload()
                 }
               }}
@@ -407,6 +463,7 @@ export default function BackofficePage({
               <div className="space-y-3">
                 {filtered.map((product) => {
                   const inventory = productStock(product.variants)
+
                   return (
                     <article
                       key={product.id}
@@ -478,6 +535,7 @@ export default function BackofficePage({
                           pesos activos · Reservado:{" "}
                           {product.variants.reduce(
                             (sum, item) => sum + item.stock_reserved,
+
                             0,
                           )}
                         </p>
@@ -524,8 +582,11 @@ export default function BackofficePage({
                     className={`${actionClass} mt-4`}
                     onClick={() => {
                       setSearch("")
+
                       setCategory("")
+
                       setPublished("")
+
                       setStock("")
                     }}
                   >
