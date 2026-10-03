@@ -45,4 +45,5 @@ export const orderDate = (value: string) =>
   new Date(value).toLocaleString("es-AR", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: "America/Argentina/Buenos_Aires",
   })

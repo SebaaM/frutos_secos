@@ -69,6 +69,12 @@ const fieldLabels: Record<string, string> = {
   image_url: "URL",
 
   alt_text: "Descripción de imagen",
+  email: "Email",
+  address: "Dirección",
+  delivery: "Modalidad",
+  lines: "Productos",
+  expected_unit_price: "Precio esperado",
+  expected_status: "Estado esperado",
 }
 
 function errorText(value: unknown): string {
