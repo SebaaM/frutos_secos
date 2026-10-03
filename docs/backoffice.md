@@ -3,8 +3,9 @@
 ## Alcance implementado
 
 Panel React en `/backoffice`, mobile-first y conectado a Django por `/api/v1/backoffice/`.
-Administra productos, categorías, presentaciones de peso fijo, galería y stock. No incluye
-pedidos, autenticación, métricas ni dashboards: corresponden a etapas posteriores.
+Administra productos, categorías, presentaciones de peso fijo, galería y stock.
+La etapa 2 agrega autenticación de operadores y pedidos: ver [pedidos.md](pedidos.md).
+Métricas y dashboards permanecen fuera de alcance.
 
 ## Operación
 
@@ -39,7 +40,8 @@ La interfaz admite g y kg y guarda siempre gramos enteros.
   hay que actualizar el producto antes de intentar nuevamente.
 - Peso y activación quedan protegidos si hay unidades reservadas.
 - Historial: últimas 100 operaciones, con fecha, motivo, delta, físico anterior y resultante.
-  No se atribuye un usuario todavía; la auditoría de operadores se sumará con autenticación.
+  Los ajustes físicos de catálogo aún no atribuyen usuario al movimiento; esa ampliación de auditoría
+  sigue pendiente. Las transiciones de pedidos sí guardan su operador en OrderEvent.
 
 ### Alertas de reposición
 
@@ -87,9 +89,11 @@ borrador existente que recibe su primera imagen. Si una subida falla, se conserv
 borrador y las imágenes ya guardadas; el editor permite corregir y reintentar sin recrear
 el producto ni reenviar las imágenes cuya subida se confirmó.
 
-## Acceso temporal: exclusivamente local
+## Acceso autenticado con protección local
 
-No existe autenticación en esta etapa. Para usar la API administrativa se exige:
+La etapa 2 protege este catálogo con sesión de operador activo `is_staff` y CSRF para escrituras.
+Crear el primer responsable y configurar email según [pedidos.md](pedidos.md).
+Además, para usar la API administrativa se exige:
 
 1. `DJANGO_DEBUG=true` y `BACKOFFICE_ENABLED=true`.
 2. Conexión de loopback a Django y, cuando pasa por Vite, cliente de loopback al proxy.
