@@ -4,20 +4,203 @@ info:
   version: 1.0.0
   description: 'Catálogo público y administración local de productos, categorías,
     galerías y stock. Precios en ARS como strings decimales; pesos enteros en gramos
-    y stock en paquetes. Pedidos, reservas y autenticación todavía no están implementados.
-    El backoffice y esta documentación requieren DEBUG, BACKOFFICE_ENABLED y cliente
-    local. Las operaciones de escritura de Swagger modifican datos reales: no ejecutarlas
-    como prueba.'
+    y stock en paquetes. Pedidos con reservas transaccionales, acceso por email y
+    sesiones de operadores. El backoffice requiere operador activo, DEBUG, BACKOFFICE_ENABLED
+    y cliente local; la documentación conserva su guard local. Escrituras requieren
+    X-CSRFToken obtenido en /api/v1/auth/session/. Las operaciones de escritura de
+    Swagger modifican datos reales: no ejecutarlas como prueba.'
 paths:
+  /api/v1/auth/customer/logout/:
+    post:
+      operationId: v1_auth_customer_logout_create
+      summary: Cerrar acceso del cliente
+      tags:
+      - Autenticación
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/v1/auth/customer/request-link/:
+    post:
+      operationId: v1_auth_customer_request_link_create
+      description: Respuesta genérica para evitar revelar cuentas. Enlace de un uso,
+        enviado solo a emails con pedidos existentes. Requiere CSRF.
+      summary: Solicitar acceso del cliente por email
+      tags:
+      - Autenticación
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EmailInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EmailInputRequest'
+        required: true
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/auth/customer/verify/:
+    post:
+      operationId: v1_auth_customer_verify_create
+      description: 'POST explícito: abrir un email no consume el enlace. Token aleatorio
+        guardado como hash; no es el número de pedido. Requiere CSRF.'
+      summary: Canjear enlace de acceso
+      tags:
+      - Autenticación
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyLinkRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyLinkRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyLinkRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/auth/session/:
+    get:
+      operationId: v1_auth_session_retrieve
+      summary: Consultar sesión y obtener token CSRF
+      tags:
+      - Autenticación
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+  /api/v1/auth/staff/login/:
+    post:
+      operationId: v1_auth_staff_login_create
+      description: Solo operadores activos is_staff. Requiere X-CSRFToken incluso
+        antes de iniciar sesión. Mantiene el guard de desarrollo local.
+      summary: Iniciar sesión de operador
+      tags:
+      - Autenticación
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StaffLoginRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/auth/staff/logout/:
+    post:
+      operationId: v1_auth_staff_logout_create
+      summary: Cerrar la sesión compartida del navegador
+      tags:
+      - Autenticación
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+          description: ''
   /api/v1/backoffice/categories/:
     get:
       operationId: v1_backoffice_categories_list
       description: |+
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
       summary: Listar todas las categorías
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '403':
           content:
@@ -41,7 +224,7 @@ paths:
     post:
       operationId: v1_backoffice_categories_create
       description: |+
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
       summary: Crear categoría
       tags:
@@ -64,6 +247,8 @@ paths:
             schema:
               $ref: '#/components/schemas/AdminCategoryRequest'
         required: true
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -98,7 +283,7 @@ paths:
     get:
       operationId: v1_backoffice_categories_retrieve
       description: |+
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
       summary: Consultar categoría
       parameters:
@@ -110,6 +295,8 @@ paths:
         required: true
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '403':
           content:
@@ -142,7 +329,7 @@ paths:
     patch:
       operationId: v1_backoffice_categories_partial_update
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         No se puede desactivar si tiene productos publicados. No admite DELETE ni PUT.
       summary: Editar o desactivar categoría
@@ -166,6 +353,8 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedAdminCategoryRequest'
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -211,7 +400,7 @@ paths:
     patch:
       operationId: v1_backoffice_images_partial_update
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Solo alt_text y credit; para reemplazar archivo o URL, agregar una imagen nueva.
       summary: Editar descripción o crédito de imagen
@@ -235,6 +424,8 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedImageMetadataRequest'
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -279,7 +470,7 @@ paths:
     delete:
       operationId: v1_backoffice_images_destroy
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Elimina la referencia, conserva el archivo físico para recuperación manual y normaliza posiciones. No se puede quitar la última imagen de un producto publicado: pasar antes a borrador.
       summary: Quitar imagen de la galería
@@ -292,6 +483,8 @@ paths:
         required: true
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -329,11 +522,185 @@ paths:
           description: El recurso no existe.
         '204':
           description: No response body
+  /api/v1/backoffice/orders/:
+    get:
+      operationId: v1_backoffice_orders_list
+      description: Operador activo y guard local. Más antiguos primero; 50 por página,
+        sin agenda.
+      parameters:
+      - in: query
+        name: bucket
+        schema:
+          type: string
+          enum:
+          - cerrados
+          - confirmar
+          - entrega
+          - entregados
+          - proximos
+        description: Columna del tablero; Próximos son reservados y preparando, sin
+          agenda.
+      - in: query
+        name: delivery
+        schema:
+          type: string
+          enum:
+          - entrega_local
+          - retiro_local
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Referencia o nombre, no modifica la identidad del cliente.
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - A_CONFIRMAR
+          - CANCELADO
+          - EN_REPARTO
+          - LISTO_PARA_RETIRO
+          - PREPARANDO
+          - RESERVADO
+          - TERMINADO
+          - VENCIDO
+      tags:
+      - Backoffice
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminOrderList'
+          description: ''
+  /api/v1/backoffice/orders/{id}/:
+    get:
+      operationId: v1_backoffice_orders_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - Backoffice
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+    patch:
+      operationId: v1_backoffice_orders_partial_update
+      description: Solo nota interna. No permite editar líneas, precios ni stock.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderNoteRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderNoteRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderNoteRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+  /api/v1/backoffice/orders/{id}/transition/:
+    post:
+      operationId: v1_backoffice_orders_transition_create
+      description: Transacción con bloqueo de pedido, productos y variantes. expected_status
+        evita acciones obsoletas. Reservar mantiene stock; cancelar/vencer libera;
+        terminar consume físico y reservado con historial. Vencimiento automático
+        solo en RESERVADO, no durante preparación/reparto.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - Backoffice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TransitionRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOrder'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
   /api/v1/backoffice/products/:
     get:
       operationId: v1_backoffice_products_list
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Incluye borradores, variantes inactivas y galería. Sin paginación; orden por nombre. Los filtros de disponibilidad del panel se aplican en React, no en este endpoint.
       summary: Listar productos administrativos
@@ -358,6 +725,8 @@ paths:
         description: Buscar nombre o SKU, sin distinguir mayúsculas.
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '403':
           content:
@@ -381,7 +750,7 @@ paths:
     post:
       operationId: v1_backoffice_products_create
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Crear en borrador, cargar imágenes y luego publicar. Para publicar: categoría activa, al menos una imagen y una variante activa con precio positivo. SKU global único; peso único por producto. Productos y variantes se guardan en una transacción. stock_physical solo establece stock inicial de variantes nuevas; el reservado no se escribe.
       summary: Crear producto con presentaciones
@@ -418,6 +787,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ProductInputRequest'
         required: true
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -452,7 +823,7 @@ paths:
     get:
       operationId: v1_backoffice_products_retrieve
       description: |+
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
       summary: Consultar producto administrativo
       parameters:
@@ -464,6 +835,8 @@ paths:
         required: true
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '403':
           content:
@@ -496,7 +869,7 @@ paths:
     patch:
       operationId: v1_backoffice_products_partial_update
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Los campos de producto son opcionales en PATCH. Si enviás variants, incluí todas las existentes con id y datos completos (sku, weight_grams, price, is_active); no se eliminan por omisión. Para ocultar: is_published=false o is_active=false. El stock existente solo cambia por adjust-stock. No cambiar peso ni desactivar una variante reservada. No admite DELETE ni PUT.
       summary: Editar producto y presentaciones
@@ -525,6 +898,8 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PatchedProductInputRequest'
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -570,7 +945,7 @@ paths:
     post:
       operationId: v1_backoffice_products_images_create
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Un archivo image por solicitud multipart o image_url en JSON, nunca ambos. alt_text obligatorio. Máximo 10 imágenes por producto; archivos JPEG/PNG/WebP de hasta 5 MiB y 25 megapíxeles. Se agrega al final; posición 0 es portada.
       summary: Agregar imagen a la galería
@@ -599,6 +974,8 @@ paths:
                   credit: ''
                 summary: Imagen desde URL
         required: true
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -644,7 +1021,7 @@ paths:
     post:
       operationId: v1_backoffice_products_reorder_images_create
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Enviar todos los IDs de la galería exactamente una vez, en el orden deseado. El primer ID pasa a portada. Devuelve la galería ordenada.
       summary: Ordenar galería y elegir portada
@@ -676,6 +1053,8 @@ paths:
             schema:
               $ref: '#/components/schemas/ImageOrderRequest'
         required: true
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -723,7 +1102,7 @@ paths:
     post:
       operationId: v1_backoffice_variants_adjust_stock_create
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         delta entero distinto de 0; reason obligatorio; expected_stock es el físico observado. Si cambió, responde 409. Transacción con bloqueo de filas y movimiento auditado. No modifica reservado ni permite físico negativo o menor al reservado. Disponible = físico − reservado. Cantidades en paquetes, no gramos.
       summary: Ajustar stock físico con auditoría
@@ -755,6 +1134,8 @@ paths:
             schema:
               $ref: '#/components/schemas/StockAdjustmentRequest'
         required: true
+      security:
+      - cookieAuth: []
       responses:
         '400':
           content:
@@ -812,7 +1193,7 @@ paths:
     get:
       operationId: v1_backoffice_variants_movements_list
       description: |-
-        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. No hay autenticación todavía; nunca exponer en producción.
+        Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. Requiere una sesión de operador activo y X-CSRFToken para escrituras.
 
         Hasta 100 movimientos, más recientes primero. Incluye delta, motivo, físico anterior/resultante y fecha.
       summary: Consultar historial de stock
@@ -825,6 +1206,8 @@ paths:
         required: true
       tags:
       - Backoffice
+      security:
+      - cookieAuth: []
       responses:
         '403':
           content:
@@ -984,6 +1367,119 @@ paths:
                     status: ok
                   summary: Servicio disponible
           description: ''
+  /api/v1/orders/:
+    get:
+      operationId: v1_orders_list
+      description: Solo pedidos del cliente verificado por sesión. Ordenados por antigüedad;
+        paginados de a 50.
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: Un número de página dentro del conjunto de resultados paginado.
+        schema:
+          type: integer
+      tags:
+      - Pedidos
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderList'
+          description: ''
+    post:
+      operationId: v1_orders_create
+      description: Crea A_CONFIRMAR sin reserva. Precios y total validados en servidor.
+        Reintentos con el mismo idempotency_key y datos devuelven el mismo pedido.
+        Requiere CSRF; no envía WhatsApp automáticamente.
+      tags:
+      - Pedidos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderInputRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderInputRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderInputRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '409':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '429':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+  /api/v1/orders/{id}/:
+    get:
+      operationId: v1_orders_retrieve
+      description: Otro cliente recibe 404. Ni email ni referencia sirven como credenciales.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^[0-9a-f-]{36}$
+        required: true
+      tags:
+      - Pedidos
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
 components:
   schemas:
     AdminCategory:
@@ -1022,6 +1518,98 @@ components:
       required:
       - name
       - slug
+    AdminOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/DeliveryEnum'
+          readOnly: true
+        address:
+          type: string
+          readOnly: true
+        address_help:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatusEnum'
+          readOnly: true
+        status_label:
+          type: string
+          readOnly: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        reserved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reservation_expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderEvent'
+          readOnly: true
+        internal_note:
+          type: string
+          readOnly: true
+      required:
+      - address
+      - address_help
+      - created_at
+      - delivery
+      - email
+      - events
+      - id
+      - internal_note
+      - lines
+      - name
+      - phone
+      - reference
+      - reservation_expires_at
+      - reserved_at
+      - status
+      - status_label
+      - subtotal
+      - updated_at
     AdminProduct:
       type: object
       properties:
@@ -1126,13 +1714,44 @@ components:
       - id
       - name
       - slug
+    CustomerIdentity:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    DeliveryEnum:
+      enum:
+      - retiro_local
+      - entrega_local
+      type: string
+      description: |-
+        * `retiro_local` - Retiro local
+        * `entrega_local` - Reparto local
+    EmailInputRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+      required:
+      - email
     Health:
       type: object
       properties:
         status:
-          $ref: '#/components/schemas/StatusEnum'
+          $ref: '#/components/schemas/HealthStatusEnum'
       required:
       - status
+    HealthStatusEnum:
+      enum:
+      - ok
+      type: string
+      description: '* `ok` - ok'
     ImageInputRequest:
       type: object
       properties:
@@ -1166,6 +1785,287 @@ components:
           maxItems: 10
       required:
       - ids
+    LineInputRequest:
+      type: object
+      properties:
+        variant_id:
+          type: integer
+          minimum: 1
+        quantity:
+          type: integer
+          maximum: 999
+          minimum: 1
+        expected_unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+      required:
+      - expected_unit_price
+      - quantity
+      - variant_id
+    Message:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        reference:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        delivery:
+          allOf:
+          - $ref: '#/components/schemas/DeliveryEnum'
+          readOnly: true
+        address:
+          type: string
+          readOnly: true
+        address_help:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/OrderStatusEnum'
+          readOnly: true
+        status_label:
+          type: string
+          readOnly: true
+        subtotal:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+        reserved_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        reservation_expires_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderLine'
+          readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderEvent'
+          readOnly: true
+      required:
+      - address
+      - address_help
+      - created_at
+      - delivery
+      - email
+      - events
+      - id
+      - lines
+      - name
+      - phone
+      - reference
+      - reservation_expires_at
+      - reserved_at
+      - status
+      - status_label
+      - subtotal
+      - updated_at
+    OrderEvent:
+      type: object
+      properties:
+        from_status:
+          type: string
+          maxLength: 24
+        to_status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        public_note:
+          type: string
+          maxLength: 500
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - to_status
+    OrderInputRequest:
+      type: object
+      properties:
+        idempotency_key:
+          type: string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/LineInputRequest'
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        phone:
+          type: string
+          default: ''
+          maxLength: 40
+        delivery:
+          $ref: '#/components/schemas/DeliveryEnum'
+        address:
+          type: string
+          default: ''
+          maxLength: 300
+        address_help:
+          type: string
+          default: ''
+          maxLength: 300
+      required:
+      - delivery
+      - email
+      - idempotency_key
+      - lines
+      - name
+    OrderLine:
+      type: object
+      properties:
+        variant_id:
+          type: integer
+          readOnly: true
+        product_id_snapshot:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        product_name:
+          type: string
+          maxLength: 160
+        sku:
+          type: string
+          maxLength: 64
+        weight_grams:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        unit_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        quantity:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        line_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+      required:
+      - line_total
+      - product_id_snapshot
+      - product_name
+      - quantity
+      - sku
+      - unit_price
+      - variant_id
+      - weight_grams
+    OrderStatusEnum:
+      enum:
+      - A_CONFIRMAR
+      - RESERVADO
+      - PREPARANDO
+      - LISTO_PARA_RETIRO
+      - EN_REPARTO
+      - TERMINADO
+      - CANCELADO
+      - VENCIDO
+      type: string
+      description: |-
+        * `A_CONFIRMAR` - A confirmar
+        * `RESERVADO` - Reservado
+        * `PREPARANDO` - Preparando
+        * `LISTO_PARA_RETIRO` - Listo para retirar
+        * `EN_REPARTO` - En reparto
+        * `TERMINADO` - Terminado
+        * `CANCELADO` - Cancelado
+        * `VENCIDO` - Vencido
+    PaginatedAdminOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminOrder'
+    PaginatedOrderList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
     PatchedAdminCategoryRequest:
       type: object
       properties:
@@ -1190,6 +2090,12 @@ components:
         credit:
           type: string
           maxLength: 160
+    PatchedOrderNoteRequest:
+      type: object
+      properties:
+        internal_note:
+          type: string
+          maxLength: 4000
     PatchedProductInputRequest:
       type: object
       properties:
@@ -1361,11 +2267,45 @@ components:
       - sku
       - stock_available
       - weight_grams
-    StatusEnum:
-      enum:
-      - ok
-      type: string
-      description: '* `ok` - ok'
+    Session:
+      type: object
+      properties:
+        csrf_token:
+          type: string
+        staff:
+          allOf:
+          - $ref: '#/components/schemas/StaffIdentity'
+          nullable: true
+        customer:
+          allOf:
+          - $ref: '#/components/schemas/CustomerIdentity'
+          nullable: true
+      required:
+      - csrf_token
+      - customer
+      - staff
+    StaffIdentity:
+      type: object
+      properties:
+        username:
+          type: string
+      required:
+      - username
+    StaffLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 150
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+          maxLength: 256
+      required:
+      - password
+      - username
     StockAdjustmentRequest:
       type: object
       properties:
@@ -1423,6 +2363,20 @@ components:
       - reason
       - resulting_stock
       - variant
+    TransitionRequest:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        expected_status:
+          $ref: '#/components/schemas/OrderStatusEnum'
+        public_note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - expected_status
+      - status
     VariantInputRequest:
       type: object
       properties:
@@ -1452,10 +2406,29 @@ components:
       - price
       - sku
       - weight_grams
+    VerifyLinkRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 32
+          maxLength: 128
+      required:
+      - token
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+      description: Sesión HttpOnly. Escrituras requieren X-CSRFToken obtenido en /auth/session/.
 tags:
 - name: Sistema
   description: Disponibilidad del servicio; no comprueba conexión a la base.
 - name: Catálogo
   description: Lectura pública de productos publicados y categorías activas.
 - name: Backoffice
-  description: Solo desarrollo local, sin autenticación todavía.
+  description: Operadores autenticados y protección adicional de desarrollo local.
+- name: Pedidos
+  description: Creación pendiente y seguimiento privado del cliente.
+- name: Autenticación
+  description: Sesiones HttpOnly, CSRF y enlaces de acceso de un uso.

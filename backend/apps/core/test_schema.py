@@ -37,6 +37,17 @@ class OpenApiContractTests(SimpleTestCase):
             "/api/v1/backoffice/images/{id}/": {"patch", "delete"},
             "/api/v1/backoffice/variants/{id}/adjust-stock/": {"post"},
             "/api/v1/backoffice/variants/{id}/movements/": {"get"},
+            "/api/v1/auth/session/": {"get"},
+            "/api/v1/auth/staff/login/": {"post"},
+            "/api/v1/auth/staff/logout/": {"post"},
+            "/api/v1/auth/customer/request-link/": {"post"},
+            "/api/v1/auth/customer/verify/": {"post"},
+            "/api/v1/auth/customer/logout/": {"post"},
+            "/api/v1/orders/": {"get", "post"},
+            "/api/v1/orders/{id}/": {"get"},
+            "/api/v1/backoffice/orders/": {"get"},
+            "/api/v1/backoffice/orders/{id}/": {"get", "patch"},
+            "/api/v1/backoffice/orders/{id}/transition/": {"post"},
         }
         self.assertEqual({path: set(operations) for path, operations in self.schema["paths"].items()}, expected)
         ids = [operation["operationId"] for operations in self.schema["paths"].values() for operation in operations.values()]
