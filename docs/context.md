@@ -11,7 +11,7 @@
 - `frontend/src/lib/backoffice-api.ts`: contratos administrativos; precios transportados como strings decimales.
 - `backend/`: Django 5.2 LTS y Django REST Framework; PostgreSQL mediante `DATABASE_URL`.
 - SQLite se usa solo como arranque local cuando no se configura `DATABASE_URL`.
-- `docs/backoffice.md`: fuente de verdad del alcance y operación de la etapa 1.
+- `docs/backoffice.md`: fuente de verdad del catálogo; `docs/pedidos.md`: pedidos y acceso de etapa 2.
 - `docs/api.md`: guía de integración; `docs/openapi.yaml`: contrato OpenAPI 3.0.3 generado desde DRF.
 - Swagger local en `/api/docs/swagger/`, esquema dinámico `/api/schema/` (YAML o `?format=json`).
   drf-spectacular y sidecar sirven assets locales, sin CDN; documentación protegida por el guard local.
@@ -30,6 +30,8 @@ controles de al menos 44 px y disposición mobile-first.
 - `ProductImage`: archivo local o URL heredada, descripción accesible, crédito y posición.
   La primera imagen de la galería es la portada.
 - `StockMovement`: variante, delta, motivo, físico anterior/resultante y fecha.
+- `Customer` y `AccessLink`: identidad de cliente separada de operadores y token de acceso de un uso, almacenado como hash.
+- `Order`, `OrderLine`, `OrderEvent`: pedido con referencia/UUID, snapshots de pesos/precios/nombres y transiciones auditadas.
 
 Django valida publicación, peso, stock y galería. Disponible = físico − reservado.
 Los ajustes tienen motivo, protección de concurrencia y transacción; no se editan reservas.
@@ -40,8 +42,8 @@ No se borran productos, categorías ni variantes desde el panel; se desactivan/o
 Las imágenes sí pueden quitarse de la galería; se preservan los archivos físicos locales.
 
 La migración `0003` agrega galería con archivos, conservación, movimientos y restricciones,
-sin reemplazar datos ni ejecutar fixtures. El catálogo local existente conserva 8 productos,
-19 variantes y 16 imágenes. No recargar `sample_catalog` sobre datos administrados.
+sin reemplazar datos ni ejecutar fixtures. Las migraciones iniciales de accounts/orders crean
+tablas nuevas y no reescriben el catálogo. No recargar `sample_catalog` sobre datos administrados.
 
 ## Ejecución y límites de la etapa 1
 
@@ -51,30 +53,39 @@ sin reemplazar datos ni ejecutar fixtures. El catálogo local existente conserva
 - `BACKOFFICE_ENABLED=true` solo tiene efecto con DEBUG y cliente local; no habilita producción.
 - Archivos en `backend/media/`, excluidos de Git. Pillow verifica las imágenes subidas.
 - Para el catálogo administrado, usar el servidor de desarrollo de Vite, no `vite preview`
-  sin proxy. Un despliegue necesita reverse proxy de API/media y autenticación antes de habilitar administración.
+  sin proxy. Un despliegue necesita reverse proxy de API/media, HTTPS y una política explícita de administración.
 - `.env.example` es una referencia: Django lee variables del proceso y no carga un `.env` automáticamente.
 
 El catálogo público ya consulta Django. Los datos estáticos siguen como fallback visual;
 no se utilizan para el backoffice. El carrito se revalida contra el catálogo recibido y se
 vuelve a consultar el catálogo al regresar desde el panel.
 
-## Pedidos y autenticación: pendientes de etapa 2
+## Pedidos y autenticación: etapa 2 implementada
 
-La creación de pedidos y “Mis pedidos” siguen siendo prototipos del frontend con almacenamiento
-local; no hay persistencia de pedidos ni verificación real del email en Django.
-El carrito deriva a WhatsApp indicando que stock, pago y entrega requieren confirmación.
+El carrito crea el pedido en Django y luego ofrece derivarlo a WhatsApp. Email obligatorio,
+precio esperado y clave de idempotencia; subtotal calculado con Decimal y snapshots históricos.
+Los nuevos pedidos no se guardan en localStorage; el historial viejo no se borra ni usa como credencial.
+El fallback del catálogo no puede generar pedidos. La pantalla de detalle consulta estado e historial reales.
 
-Reglas acordadas para implementar después:
+Reglas actuales:
 
 - `A_CONFIRMAR` no reserva unidades.
 - Confirmar reserva stock mediante transacciones en Django.
 - Reservas se mantienen durante preparación, retiro o reparto; terminar consume físico
   y libera reservado. Cancelar/vencer libera reservado sin aumentar físico.
-- Plazos de reserva/recordatorios configurables; documentar calendario hábil antes de automatizar.
+- Vencimiento configurable a 48 horas de apertura; calendario provisional lunes a sábado de 9 a 19.
+  Comando `expire_reservations` con dry-run; ejecución automática deshabilitada por defecto.
+  Solo vence RESERVADO: iniciar preparación cierra el plazo pendiente y mantiene stock.
+  Recordatorios y alertas internas previas todavía pendientes.
 - Tablero mobile-first con pedidos por estado y “Próximos” ordenados por antigüedad,
   sin agenda ni franjas horarias.
 - Acceso del cliente por enlace de email, sin contraseña; cada cliente solo ve sus pedidos.
 - Autenticación del backoffice protege también catálogo, imágenes y stock.
+- Sesiones HttpOnly con CSRF obligatorio incluso en login y checkout anónimo. Enlaces de un uso,
+  token en hash y fragmento URL, POST explícito para verificar; customer y staff separados.
+- La administración conserva el guard local además de exigir operador activo. No habilitar producción por cambiar DEBUG.
+- Email consola en desarrollo; configurar SMTP y crear un operador interactivo para uso real.
 
-No interpretar la pantalla actual de email + número de pedido como autenticación implementada.
+Detalles funcionales y configuración en [pedidos.md](pedidos.md). El acceso anterior de email +
+número de pedido fue reemplazado; ninguna referencia permite ver datos privados sin verificación.
 Analíticas, dashboards, pagos online y automatización de WhatsApp quedan fuera de estas etapas.

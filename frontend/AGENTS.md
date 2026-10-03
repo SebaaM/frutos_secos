@@ -47,12 +47,16 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 
 - Use existing tokens and accessible controls of at least 44 px; no separate UI framework.
 - API default `/api/v1`; Vite proxies `/api`, `/media` and `/static` to Django on 127.0.0.1:8000. Local Swagger UI: `/api/docs/swagger/`.
-- Preserve the proxy client-IP header and local-only API checks until authentication is implemented.
+- Preserve the proxy client-IP header and local-only API checks; staff session authentication is an additional requirement, not a replacement.
 - Never use sample/fallback products in administrative screens or simulate successful writes locally.
 - SKU/price/stock belong to a fixed-weight variant. Convert kg to whole grams; stock quantities count packages.
 - Reserved stock is read-only. Existing physical stock changes only through an adjustment with reason/history.
 - Stock alerts/filters use `backoffice/stock-status.ts`: per active variant, 0 = out, 1–5 = low. Do not hide exhausted weights behind an aggregate or treat no active variants as exhausted. Run `pnpm test` (Node with type stripping) for regression checks.
 - Keep decimal API prices as strings in editors. Do not send reserved or existing physical stock when saving metadata.
 - Gallery supports multiple files/URLs, descriptions, credits and cover/order. New uploads save with the product; existing gallery actions save immediately.
-- Refer to `../docs/backoffice.md` and `../docs/context.md` for current scope. Orders/authentication are not part of stage 1.
+- Refer to `../docs/backoffice.md`, `../docs/pedidos.md` and `../docs/context.md` for current scope.
+- Orders and session contracts live in `lib/order-api.ts`. `api.ts` attaches credentials and CSRF to writes, including anonymous checkout/login; never silently retry mutations.
+- Do not read or overwrite the prototype order-history storage. Store customer/staff access in HttpOnly server sessions, not local tokens; email/reference alone is not authentication.
+- Orders board groups and UI actions live in `lib/order-status.ts`; backend remains authoritative. Pending orders are sorted by age, with independent pages per column and no scheduling.
+- Oxfmt 0.2 removes separators in inline multi-property TS types: use multiline properties and run TypeScript after formatting.
 - Validate with `node node_modules/typescript/bin/tsc --noEmit` and `pnpm build`.

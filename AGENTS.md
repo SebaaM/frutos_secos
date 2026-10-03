@@ -35,7 +35,7 @@
 - Reservado de solo lectura. El físico existente solo cambia por ajustes con motivo e historial; no bajar del reservado.
 - Múltiples imágenes: máximo 10; JPEG/PNG/WebP hasta 5 MB; descripción obligatoria y primera posición como portada.
 - Mantener URLs existentes. Medios locales en `backend/media/`, nunca en Git. Al quitar de la galería, conservar archivo físico para recuperación manual.
-- Antes de autenticación, administración solo con DEBUG, bandera BACKOFFICE_ENABLED, cliente local y origen permitido.
+- Administración requiere operador activo is_staff y sesión con CSRF. Conserva además DEBUG, BACKOFFICE_ENABLED, cliente local y origen permitido; autenticación no habilita exposición remota.
 - El proxy Vite sobrescribe X-Backoffice-Client-IP con la IP del socket. No debilitar esa comprobación ni exponer administración en producción.
 - Django admin de catálogo es de consulta: no habilitar escrituras que salteen auditoría o validaciones.
 
@@ -45,5 +45,10 @@
 - Preservar cambios ajenos, datos de ejemplo y archivos no versionados; nunca usar `loaddata` como rutina de arranque.
 - Validar Django tests/check/migraciones pendientes, TypeScript y build de Vite; probar UI móvil y escritorio cuando se modifique.
 - Los tests de concurrencia real requieren PostgreSQL: no afirmar que SQLite valida bloqueo de filas.
-- Etapa 2 pendiente: pedidos, tablero por antigüedad, cliente por enlace de email sin contraseña y autenticación de operadores.
+- Etapa 2 implementada: pedidos, tablero por antigüedad, cliente por enlace de email y operadores por sesión. Fuente de verdad: `docs/pedidos.md`.
+- Enlaces de cliente de un uso, guardados como hash; customer separado de Django user/staff. No usar email + número ni historial local como contraseña.
+- Toda escritura exige CSRF, incluido checkout/login anónimos. No crear operador/contraseña predeterminados ni guardar tokens en localStorage.
+- Transiciones requieren expected_status; bloquear pedido, productos ordenados y variantes ordenadas. Terminar consume físico y reservado con movimiento; cancelar/vencer solo libera reservado.
+- Plazo de reserva pendiente solo en RESERVADO; al preparar se cierra el plazo pero se conserva stock. Calendario configurable provisional; automatización deshabilitada hasta confirmar horarios.
+- No importar historial local del prototipo ni convertir reservas preexistentes en pedidos ficticios. Pruebas UI deben usar una base aislada, no el catálogo administrado.
 - No agregar agenda/franjas horarias, analíticas ni dashboards como parte del catálogo.

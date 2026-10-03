@@ -29,17 +29,24 @@ Vite inicia en `http://localhost:8443`. Para validar la compilación sin levanta
 pnpm build
 ```
 
-## Backoffice de catálogo
+## Backoffice y pedidos
 
 Con Django y Vite iniciados, abrir `http://localhost:8443/backoffice`.
 Incluye productos, categorías, variantes por peso, múltiples imágenes y ajustes de stock con historial.
 El catálogo público refleja los cambios al volver a la tienda.
 
-Acceso temporal **sin autenticación, exclusivamente local**: DEBUG y BACKOFFICE_ENABLED deben
-estar habilitados. La API administrativa está bloqueada en producción y para conexiones remotas.
-Pedidos y autenticación corresponden al segundo plan; no están implementados todavía.
+Acceso por sesión de operador activo `is_staff`, manteniendo DEBUG, BACKOFFICE_ENABLED y protección
+local. La API administrativa sigue bloqueada en producción y para conexiones remotas.
+Crear el primer responsable con `backend/.venv/Scripts/python.exe backend/manage.py createsuperuser`.
+No hay cuenta ni contraseña predeterminadas.
 
-Consultar [operación del backoffice](docs/backoffice.md) y [contexto técnico](docs/context.md).
+La etapa 2 incluye pedidos persistentes, reservas transaccionales, tablero móvil por estado y
+seguimiento del cliente por enlace de email sin contraseña. DEBUG usa email por consola, no envío
+real; configurar SMTP antes de utilizar enlaces por email. El vencimiento automático está deshabilitado
+hasta confirmar calendario y scheduler.
+
+Consultar [operación del catálogo](docs/backoffice.md), [pedidos y configuración de acceso](docs/pedidos.md)
+y [contexto técnico](docs/context.md).
 
 ## Documentación de API
 
@@ -62,7 +69,7 @@ Las pruebas Django usan una base temporal; no recargan ni borran el catálogo lo
 
 ## Próximos pasos
 
-1. Crear pedidos, movimientos de inventario y reservas de stock en el backend.
-2. Implementar autenticación del backoffice y acceso del cliente por enlace de email sin contraseña.
-3. Tablero móvil: pedidos a confirmar, próximos por antigüedad, listos, en reparto y entregados.
-4. Configurar PostgreSQL, el número de WhatsApp y las variables reales fuera de Git.
+1. Crear operadores reales y configurar SMTP, PostgreSQL y WhatsApp fuera de Git.
+2. Confirmar calendario hábil y habilitar scheduler de vencimientos; recordatorios/alertas previas pendientes.
+3. Validar concurrencia con PostgreSQL y preparar el despliegue HTTPS y política de acceso administrativo.
+4. Roles por función, auditoría de ajustes por operador y analíticas quedan para próximas etapas.
