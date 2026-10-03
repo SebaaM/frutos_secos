@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser
@@ -12,6 +12,7 @@ from rest_framework.throttling import AnonRateThrottle
 from apps.accounts.services import session_customer
 from apps.accounts.serializers import MessageSerializer
 from apps.catalog.backoffice_views import LocalDevelopmentOnly
+from apps.catalog.schema import VALIDATION_ERROR
 from .models import Order
 from .serializers import AdminOrderSerializer, OrderInputSerializer, OrderNoteSerializer, OrderSerializer, TransitionSerializer
 from .services import create_order, transition_order
@@ -34,8 +35,8 @@ class OrderPagination(PageNumberPagination):
 
 
 @extend_schema_view(
-    create=extend_schema(tags=["Pedidos"], auth=[], request=OrderInputSerializer, responses={201: OrderSerializer, 200: OrderSerializer, 400: MessageSerializer, 403: MessageSerializer, 409: MessageSerializer, 429: MessageSerializer}, description="Crea A_CONFIRMAR sin reserva. Precios y total validados en servidor. Reintentos con el mismo idempotency_key y datos devuelven el mismo pedido. Requiere CSRF; no envía WhatsApp automáticamente."),
-    list=extend_schema(tags=["Pedidos"], responses=OrderSerializer(many=True), description="Solo pedidos del cliente verificado por sesión. Ordenados por antigüedad; paginados de a 50."),
+    create=extend_schema(tags=["Pedidos"], auth=[], request=OrderInputSerializer, responses={201: OrderSerializer, 200: OrderSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 409: MessageSerializer, 429: MessageSerializer}, description="Crea A_CONFIRMAR sin reserva. Precios y total validados en servidor. Reintentos con el mismo idempotency_key y datos devuelven el mismo pedido. Requiere CSRF; no envía WhatsApp automáticamente."),
+    list=extend_schema(tags=["Pedidos"], responses={200: OrderSerializer(many=True), 403: MessageSerializer}, description="Solo pedidos del cliente verificado por sesión. Ordenados por antigüedad; paginados de a 50."),
     retrieve=extend_schema(tags=["Pedidos"], responses={200: OrderSerializer, 403: MessageSerializer, 404: MessageSerializer}, description="Otro cliente recibe 404. Ni email ni referencia sirven como credenciales."),
 )
 class CustomerOrderViewSet(viewsets.GenericViewSet):
@@ -79,7 +80,7 @@ class CustomerOrderViewSet(viewsets.GenericViewSet):
         OpenApiParameter("bucket", str, enum=["confirmar", "proximos", "entrega", "entregados", "cerrados"], description="Columna del tablero; Próximos son reservados y preparando, sin agenda."),
     ], description="Operador activo y guard local. Más antiguos primero; 50 por página, sin agenda."),
     retrieve=extend_schema(tags=["Backoffice"], responses=AdminOrderSerializer),
-    partial_update=extend_schema(tags=["Backoffice"], request=OrderNoteSerializer, responses=AdminOrderSerializer, description="Solo nota interna. No permite editar líneas, precios ni stock."),
+    partial_update=extend_schema(tags=["Backoffice"], request=OrderNoteSerializer, responses={200: AdminOrderSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 404: MessageSerializer}, description="Solo nota interna. No permite editar líneas, precios ni stock."),
 )
 class AdminOrderViewSet(viewsets.GenericViewSet):
     permission_classes = [LocalDevelopmentOnly, IsAdminUser]
@@ -126,7 +127,7 @@ class AdminOrderViewSet(viewsets.GenericViewSet):
         order.save(update_fields=["internal_note", "updated_at"])
         return Response(self.get_serializer(order).data)
 
-    @extend_schema(tags=["Backoffice"], request=TransitionSerializer, responses={200: AdminOrderSerializer, 400: MessageSerializer, 403: MessageSerializer, 404: MessageSerializer, 409: MessageSerializer}, description="Transacción con bloqueo de pedido, productos y variantes. expected_status evita acciones obsoletas. Reservar mantiene stock; cancelar/vencer libera; terminar consume físico y reservado con historial. Vencimiento automático solo en RESERVADO, no durante preparación/reparto.")
+    @extend_schema(tags=["Backoffice"], request=TransitionSerializer, responses={200: AdminOrderSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 404: MessageSerializer, 409: MessageSerializer}, description="Transacción con bloqueo de pedido, productos y variantes. expected_status evita acciones obsoletas. Reservar mantiene stock; cancelar/vencer libera; terminar consume físico y reservado con historial. Vencimiento automático solo en RESERVADO, no durante preparación/reparto.")
     @action(detail=True, methods=["post"], url_path="transition")
     def transition(self, request, pk=None):
         self.get_object()

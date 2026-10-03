@@ -86,6 +86,18 @@ class OpenApiContractTests(SimpleTestCase):
         self.assertEqual(set(paths["/api/v1/backoffice/variants/{id}/adjust-stock/"]["post"]["responses"]), {"200", "400", "403", "404", "409"})
         self.assertNotIn("content", paths["/api/v1/backoffice/images/{id}/"]["delete"]["responses"]["204"])
 
+    def test_orders_sessions_and_validation_error_contracts(self):
+        paths = self.schema["paths"]
+        for path in ["/api/v1/orders/", "/api/v1/auth/customer/request-link/", "/api/v1/backoffice/orders/{id}/transition/"]:
+            error = paths[path]["post"]["responses"]["400"]["content"]["application/json"]["schema"]
+            self.assertIn("oneOf", self.resolve(error))
+        self.assertIn("403", paths["/api/v1/orders/"]["get"]["responses"])
+        self.assertNotIn("internal_note", self.schema["components"]["schemas"]["Order"]["properties"])
+        self.assertIn("internal_note", self.schema["components"]["schemas"]["AdminOrder"]["properties"])
+        self.assertEqual(self.schema["components"]["securitySchemes"]["cookieAuth"]["in"], "cookie")
+        self.assertEqual(self.schema["components"]["schemas"]["OrderLine"]["properties"]["unit_price"]["type"], "string")
+        self.assertIn("csrf_token", self.schema["components"]["schemas"]["Session"]["properties"])
+
     @override_settings(DEBUG=True, BACKOFFICE_ENABLED=True)
     def test_local_documentation_and_static_swagger_resources(self):
         client = APIClient()

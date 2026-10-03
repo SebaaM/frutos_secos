@@ -10,6 +10,7 @@ from rest_framework.throttling import SimpleRateThrottle
 from rest_framework.views import APIView
 
 from apps.catalog.backoffice_views import LocalDevelopmentOnly
+from apps.catalog.schema import VALIDATION_ERROR
 from .serializers import EmailInputSerializer, MessageSerializer, SessionSerializer, StaffLoginSerializer, VerifyLinkSerializer
 from .services import send_access_link, session_customer, verify_access_link
 
@@ -56,7 +57,7 @@ class StaffLoginView(AuthView):
     permission_classes = [LocalDevelopmentOnly]
     throttle_classes = [AuthThrottle]
 
-    @extend_schema(tags=["Autenticación"], auth=[], request=StaffLoginSerializer, responses={200: SessionSerializer, 400: MessageSerializer, 403: MessageSerializer, 429: MessageSerializer}, summary="Iniciar sesión de operador", description="Solo operadores activos is_staff. Requiere X-CSRFToken incluso antes de iniciar sesión. Mantiene el guard de desarrollo local.")
+    @extend_schema(tags=["Autenticación"], auth=[], request=StaffLoginSerializer, responses={200: SessionSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 429: MessageSerializer}, summary="Iniciar sesión de operador", description="Solo operadores activos is_staff. Requiere X-CSRFToken incluso antes de iniciar sesión. Mantiene el guard de desarrollo local.")
     def post(self, request):
         data = StaffLoginSerializer(data=request.data)
         data.is_valid(raise_exception=True)
@@ -77,7 +78,7 @@ class StaffLogoutView(AuthView):
 class RequestLinkView(AuthView):
     throttle_classes = [AuthThrottle, EmailThrottle]
 
-    @extend_schema(tags=["Autenticación"], auth=[], request=EmailInputSerializer, responses={202: MessageSerializer, 400: MessageSerializer, 403: MessageSerializer, 429: MessageSerializer}, summary="Solicitar acceso del cliente por email", description="Respuesta genérica para evitar revelar cuentas. Enlace de un uso, enviado solo a emails con pedidos existentes. Requiere CSRF.")
+    @extend_schema(tags=["Autenticación"], auth=[], request=EmailInputSerializer, responses={202: MessageSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 429: MessageSerializer}, summary="Solicitar acceso del cliente por email", description="Respuesta genérica para evitar revelar cuentas. Enlace de un uso, enviado solo a emails con pedidos existentes. Requiere CSRF.")
     def post(self, request):
         data = EmailInputSerializer(data=request.data)
         data.is_valid(raise_exception=True)
@@ -88,7 +89,7 @@ class RequestLinkView(AuthView):
 class VerifyLinkView(AuthView):
     throttle_classes = [AuthThrottle]
 
-    @extend_schema(tags=["Autenticación"], auth=[], request=VerifyLinkSerializer, responses={200: SessionSerializer, 400: MessageSerializer, 403: MessageSerializer, 429: MessageSerializer}, summary="Canjear enlace de acceso", description="POST explícito: abrir un email no consume el enlace. Token aleatorio guardado como hash; no es el número de pedido. Requiere CSRF.")
+    @extend_schema(tags=["Autenticación"], auth=[], request=VerifyLinkSerializer, responses={200: SessionSerializer, 400: OpenApiResponse(VALIDATION_ERROR), 403: MessageSerializer, 429: MessageSerializer}, summary="Canjear enlace de acceso", description="POST explícito: abrir un email no consume el enlace. Token aleatorio guardado como hash; no es el número de pedido. Requiere CSRF.")
     def post(self, request):
         data = VerifyLinkSerializer(data=request.data)
         data.is_valid(raise_exception=True)

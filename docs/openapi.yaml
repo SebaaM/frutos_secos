@@ -57,7 +57,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
           description: ''
         '403':
           content:
@@ -102,7 +107,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
           description: ''
         '403':
           content:
@@ -160,7 +170,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
           description: ''
         '403':
           content:
@@ -635,6 +650,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/AdminOrder'
           description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
   /api/v1/backoffice/orders/{id}/transition/:
     post:
       operationId: v1_backoffice_orders_transition_create
@@ -676,7 +714,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
           description: ''
         '403':
           content:
@@ -1390,6 +1433,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedOrderList'
           description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
     post:
       operationId: v1_orders_create
       description: Crea A_CONFIRMAR sin reserva. Precios y total validados en servidor.
@@ -1426,7 +1475,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Message'
+                oneOf:
+                - type: object
+                  additionalProperties: {}
+                - type: array
+                  items:
+                    type: string
           description: ''
         '403':
           content:

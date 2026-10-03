@@ -157,7 +157,7 @@ Recordatorios a las 24 horas hábiles y alertas internas previas siguen pendient
 
 ## Verificación
 
-- Django: 52 pruebas, incluyendo checkout/idempotencia, retiro/reparto, devolución/consumo,
+- Django: 53 pruebas, incluyendo checkout/idempotencia, retiro/reparto, devolución/consumo,
   atomicidad, CSRF anónimo, operadores, enlaces de un uso, expiración y aislamiento entre clientes.
 - Dos pruebas de concurrencia con threads se omiten en SQLite y deben ejecutarse con PostgreSQL.
 - Frontend: 16 pruebas de estados, columnas, CSRF, mensaje WhatsApp, importes y alertas de stock.
