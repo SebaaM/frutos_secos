@@ -32,6 +32,8 @@ class OrderInputSerializer(serializers.Serializer):
         return data
 
     def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            return super().to_internal_value(data)
         unknown = set(data) - set(self.fields)
         if unknown:
             raise serializers.ValidationError({key: "Campo no permitido." for key in sorted(unknown)})

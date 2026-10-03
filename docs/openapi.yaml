@@ -529,6 +529,18 @@ paths:
         sin agenda.
       parameters:
       - in: query
+        name: bucket
+        schema:
+          type: string
+          enum:
+          - cerrados
+          - confirmar
+          - entrega
+          - entregados
+          - proximos
+        description: Columna del tablero; Próximos son reservados y preparando, sin
+          agenda.
+      - in: query
         name: delivery
         schema:
           type: string

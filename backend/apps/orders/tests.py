@@ -89,6 +89,16 @@ class OrderTests(TestCase):
         data["lines"] *= 2
         self.assertEqual(self.client.post("/api/v1/orders/", data, format="json").status_code, 400)
 
+    def test_invalid_json_shapes_and_client_totals_are_rejected(self):
+        self.assertEqual(self.client.post("/api/v1/orders/", [], format="json").status_code, 400)
+        self.assertEqual(self.client.post("/api/v1/orders/", self.payload(subtotal="0.01"), format="json").status_code, 400)
+
+    def test_board_columns_paginate_independently(self):
+        order = self.order()
+        self.change(order, "RESERVADO")
+        self.assertEqual(self.admin.get("/api/v1/backoffice/orders/?bucket=confirmar").data["count"], 0)
+        self.assertEqual(self.admin.get("/api/v1/backoffice/orders/?bucket=proximos").data["count"], 1)
+
     def test_pickup_lifecycle_consumes_stock_once_with_audit(self):
         order = self.order()
         for target in ["RESERVADO", "PREPARANDO", "LISTO_PARA_RETIRO", "TERMINADO"]:

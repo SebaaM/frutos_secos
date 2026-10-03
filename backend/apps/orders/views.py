@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
-from rest_framework import serializers, viewsets
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, BasePermission, IsAdminUser
 from rest_framework.response import Response
@@ -76,6 +76,7 @@ class CustomerOrderViewSet(viewsets.GenericViewSet):
         OpenApiParameter("status", str, enum=Order.Status.values),
         OpenApiParameter("search", str, description="Referencia o nombre, no modifica la identidad del cliente."),
         OpenApiParameter("delivery", str, enum=Order.Delivery.values),
+        OpenApiParameter("bucket", str, enum=["confirmar", "proximos", "entrega", "entregados", "cerrados"], description="Columna del tablero; Próximos son reservados y preparando, sin agenda."),
     ], description="Operador activo y guard local. Más antiguos primero; 50 por página, sin agenda."),
     retrieve=extend_schema(tags=["Backoffice"], responses=AdminOrderSerializer),
     partial_update=extend_schema(tags=["Backoffice"], request=OrderNoteSerializer, responses=AdminOrderSerializer, description="Solo nota interna. No permite editar líneas, precios ni stock."),
@@ -97,6 +98,16 @@ class AdminOrderViewSet(viewsets.GenericViewSet):
         query = self.request.query_params.get("search", "").strip()
         if query:
             queryset = queryset.filter(Q(reference__icontains=query) | Q(name__icontains=query))
+        buckets = {
+            "confirmar": [Order.Status.A_CONFIRMAR],
+            "proximos": [Order.Status.RESERVADO, Order.Status.PREPARANDO],
+            "entrega": [Order.Status.LISTO_PARA_RETIRO, Order.Status.EN_REPARTO],
+            "entregados": [Order.Status.TERMINADO],
+            "cerrados": [Order.Status.CANCELADO, Order.Status.VENCIDO],
+        }
+        bucket = self.request.query_params.get("bucket")
+        if bucket in buckets:
+            queryset = queryset.filter(status__in=buckets[bucket])
         return queryset
 
     def list(self, request):
