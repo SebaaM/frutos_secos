@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
+from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from .models import Category, Product, ProductImage, ProductVariant, StockMovement
@@ -15,10 +16,11 @@ def image_file(format="PNG", name="photo.png"):
     return SimpleUploadedFile(name, stream.getvalue(), content_type="image/" + format.lower())
 
 
-@override_settings(DEBUG=True, BACKOFFICE_ENABLED=True)
+@override_settings(DEBUG=True, BACKOFFICE_ENABLED=True, PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class BackofficeTests(TestCase):
     def setUp(self):
         self.client = APIClient()
+        self.client.force_authenticate(get_user_model().objects.create_user("operator", password="test-only-password", is_staff=True))
         self.media = TemporaryDirectory()
         self.addCleanup(self.media.cleanup)
         self.media_override = override_settings(MEDIA_ROOT=self.media.name)
@@ -211,12 +213,13 @@ class BackofficeTests(TestCase):
         self.assertEqual(response.data["categories"], "http://testserver/api/v1/catalog/categories/")
 
 
-@override_settings(DEBUG=True, BACKOFFICE_ENABLED=True)
+@override_settings(DEBUG=True, BACKOFFICE_ENABLED=True, PASSWORD_HASHERS=["django.contrib.auth.hashers.MD5PasswordHasher"])
 class ExistingCatalogTests(TestCase):
     fixtures = ["sample_catalog"]
 
     def test_backoffice_preserves_existing_example_catalog(self):
         client = APIClient()
+        client.force_authenticate(get_user_model().objects.create_user("operator", password="test-only-password", is_staff=True))
         response = client.get("/api/v1/backoffice/products/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual((Product.objects.count(), ProductVariant.objects.count(), ProductImage.objects.count()), (8, 19, 16))

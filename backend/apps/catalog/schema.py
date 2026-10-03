@@ -35,11 +35,11 @@ def admin_schema(*, summary, responses, request=empty, description="", parameter
         409: OpenApiResponse(DETAIL_ERROR, "expected_stock no coincide con el stock físico actual. Actualizar y reintentar."),
     }
     return extend_schema(
-        summary=summary, tags=["Backoffice"], auth=[], request=request,
+        summary=summary, tags=["Backoffice"], request=request,
         responses={**{code: error_responses[code] for code in errors}, **responses},
         description=(
             "Requiere DEBUG y BACKOFFICE_ENABLED, conexión loopback y Origin permitido si está presente. "
-            "No hay autenticación todavía; nunca exponer en producción.\n\n" + description
+            "Requiere una sesión de operador activo y X-CSRFToken para escrituras.\n\n" + description
         ),
         parameters=parameters or [], examples=examples or [],
     )

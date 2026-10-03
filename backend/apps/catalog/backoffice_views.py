@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
-from rest_framework.permissions import BasePermission
+from rest_framework.permissions import BasePermission, IsAdminUser
 from rest_framework.response import Response
 from drf_spectacular.utils import OpenApiExample, OpenApiParameter, extend_schema_view
 
@@ -21,7 +21,7 @@ from .schema import admin_schema, ImageMetadataSerializer, ImageOrderSerializer,
 
 
 class LocalDevelopmentOnly(BasePermission):
-    message = "El backoffice sin autenticación solo está disponible en desarrollo local."
+    message = "La administración solo está habilitada en desarrollo local y con origen permitido."
 
     def has_permission(self, request, view):
         origin = request.headers.get("Origin")
@@ -97,8 +97,7 @@ def write_variants(product, variants):
     partial_update=admin_schema(summary="Editar o desactivar categoría", request=AdminCategorySerializer, responses={200: AdminCategorySerializer}, description="No se puede desactivar si tiene productos publicados. No admite DELETE ni PUT."),
 )
 class CategoryAdminViewSet(viewsets.ModelViewSet):
-    authentication_classes = []
-    permission_classes = [LocalDevelopmentOnly]
+    permission_classes = [LocalDevelopmentOnly, IsAdminUser]
     serializer_class = AdminCategorySerializer
     queryset = Category.objects.all()
     http_method_names = ["get", "post", "patch", "head", "options"]
@@ -134,8 +133,7 @@ class CategoryAdminViewSet(viewsets.ModelViewSet):
     ),
 )
 class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
-    authentication_classes = []
-    permission_classes = [LocalDevelopmentOnly]
+    permission_classes = [LocalDevelopmentOnly, IsAdminUser]
     serializer_class = AdminProductSerializer
 
     def get_queryset(self):
@@ -219,8 +217,7 @@ class ProductAdminViewSet(viewsets.ReadOnlyModelViewSet):
 
 class ImageAdminViewSet(viewsets.GenericViewSet):
     queryset = ProductImage.objects.none()
-    authentication_classes = []
-    permission_classes = [LocalDevelopmentOnly]
+    permission_classes = [LocalDevelopmentOnly, IsAdminUser]
 
     @admin_schema(summary="Editar descripción o crédito de imagen", request=ImageMetadataSerializer, responses={200: ProductImageSerializer}, description="Solo alt_text y credit; para reemplazar archivo o URL, agregar una imagen nueva.")
     def partial_update(self, request, pk=None):
@@ -255,8 +252,7 @@ class ImageAdminViewSet(viewsets.GenericViewSet):
 
 class VariantAdminViewSet(viewsets.GenericViewSet):
     queryset = ProductVariant.objects.none()
-    authentication_classes = []
-    permission_classes = [LocalDevelopmentOnly]
+    permission_classes = [LocalDevelopmentOnly, IsAdminUser]
 
     @admin_schema(
         summary="Ajustar stock físico con auditoría", request=StockAdjustmentSerializer,
