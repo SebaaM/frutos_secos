@@ -3,6 +3,8 @@ import assert from "node:assert/strict"
 import {
   boardColumns,
   nextStatuses,
+  nextStep,
+  orderProgress,
   statusLabels,
 } from "../src/lib/order-status.ts"
 import { buildWhatsAppMessage } from "../src/lib/order-message.ts"
@@ -40,9 +42,19 @@ test("pedidos cerrados no proponen nuevas transiciones", () => {
   for (const status of ["TERMINADO", "CANCELADO", "VENCIDO"])
     assert.deepEqual(nextStatuses({ status, delivery: "retiro_local" }), [])
 })
+test("el progreso y el siguiente paso usan la modalidad", () => {
+  const pickup = { status: "LISTO_PARA_RETIRO", delivery: "retiro_local" }
+  assert.equal(orderProgress(pickup).current, 3)
+  assert.equal(nextStep(pickup), "Podés coordinar el retiro con Rosana.")
+  assert.equal(
+    orderProgress({ status: "EN_REPARTO", delivery: "entrega_local" }).current,
+    3,
+  )
+})
 test("el mensaje usa snapshots de API y aclara confirmación pendiente", () => {
   const message = buildWhatsAppMessage({
     reference: "RF-TEST",
+    created_at: "2026-10-03T12:00:00Z",
     status_label: "A confirmar",
     subtotal: "6000.75",
     delivery: "entrega_local",
@@ -66,6 +78,7 @@ test("el mensaje usa snapshots de API y aclara confirmación pendiente", () => {
     "Calle 123",
     "Piso 2",
     "cliente@example.invalid",
+    "Mis pedidos",
     "A confirmar",
     "no confirma stock",
     "a coordinar",

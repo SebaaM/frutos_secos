@@ -1,31 +1,49 @@
 import { ProductCard } from "../components/product"
+
 import { Button, Eyebrow, Icon } from "../components/ui"
+
 import type { Product } from "../data/products"
+
 import type { CatalogCategory } from "../lib/catalog-api"
+
 import type { Navigate } from "../components/layout"
 
 const categoryDescriptions: Record<string, string> = {
   "frutos-secos": "Naturales, crocantes y elegidos uno a uno.",
+
   mixes: "Combinaciones listas para cada momento.",
+
   hierbas: "Aromas simples para bajar un cambio.",
 }
 
 export default function HomePage({
   navigate,
+
   products,
+
   categories,
 }: {
   navigate: Navigate
+
   products: Product[]
+
   categories: CatalogCategory[]
 }) {
   const featured = products.filter((product) => product.featured)
-  const hero = products.find((product) => product.slug === "castanas-de-caju") ?? products[0]
+
+  const hero =
+    products.find((product) => product.slug === "castanas-de-caju") ??
+    products[0]
+
   const categoryCards = categories.map((category) => ({
     ...category,
+
     description:
-      categoryDescriptions[category.slug] || "Productos seleccionados para todos los días.",
-    image: products.find((product) => product.category === category.slug)?.image,
+      categoryDescriptions[category.slug] ||
+      "Productos seleccionados para todos los días.",
+
+    image: products.find((product) => product.category === category.slug)
+      ?.image,
   }))
 
   return (
@@ -36,6 +54,7 @@ export default function HomePage({
             <img
               src={hero.image}
               alt={hero.imageAlt}
+              decoding="async"
               className="absolute inset-0 size-full object-cover opacity-65 mix-blend-luminosity md:object-[center_54%]"
             />
           ) : null}
@@ -60,7 +79,9 @@ export default function HomePage({
                 variant="secondary"
                 onClick={() =>
                   document
+
                     .getElementById("como-comprar")
+
                     ?.scrollIntoView({ behavior: "smooth" })
                 }
                 className="border-white/25 bg-white/10 text-white hover:bg-white/15"
@@ -90,15 +111,22 @@ export default function HomePage({
           {[
             [
               "01",
+
               "Elegí",
+
               "Encontrá tu producto y la presentación que necesitás.",
             ],
+
             ["02", "Enviá", "Completá tus datos y mandanos el pedido."],
+
             [
               "03",
+
               "Confirmamos",
+
               "Revisamos stock, pago y forma de entrega por WhatsApp.",
             ],
+
             ["04", "Preparamos", "Dejamos todo listo para retirar o recibir."],
           ].map(([number, title, text]) => (
             <li
@@ -143,6 +171,8 @@ export default function HomePage({
                 <img
                   src={category.image}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
                 />
               ) : null}
@@ -209,7 +239,9 @@ export default function HomePage({
             <div className="mt-8 grid gap-5 sm:grid-cols-3">
               {[
                 "Presentaciones fijas",
+
                 "Información clara",
+
                 "Respuesta humana",
               ].map((item) => (
                 <div

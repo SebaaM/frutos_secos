@@ -1,231 +1,140 @@
-# Plan de implementación — Rosana Frutos Secos
+# Plan de mejora del frontend — Rosana Frutos Secos
 
-## 1. Resultado esperado
+## Objetivo
 
-Construir una tienda pública responsive y funcional en React/Vite que traduzca el brief a una experiencia web mobile-first. La app permitirá recorrer Inicio, filtrar el Catálogo, elegir una presentación en el Detalle, administrar un Carrito y completar cualquiera de las dos rutas de recepción (retiro o entrega) hasta una pantalla de pedido pendiente y la derivación a WhatsApp.
+Mejorar la tienda pública para que una persona que compra por primera vez pueda entender, sin ayuda externa, tres cosas en pocos segundos:
 
-La implementación será un prototipo frontend completo: no habrá backend, cobro, autenticación ni reserva real de stock. Todos los textos y estados reforzarán que el pedido queda **pendiente de confirmación humana por WhatsApp**.
+1. qué puede pedir y en qué presentación;
+2. que el stock, el pago y la entrega se confirman con Rosana;
+3. cómo enviar, revisar y volver a consultar su pedido.
 
-La estructura `00 · Cover & brand` a `06 · Handoff` se tomará como especificación del sistema visual y de componentes, no como páginas visibles de la tienda ni como un lienzo Figma literal. Sus foundations, variantes y notas relevantes quedarán materializadas en tokens CSS, componentes React y estados interactivos.
+La prioridad es quitar dudas y fricción del recorrido actual. No se agregarán pantallas, filtros o datos que compliquen la compra si no resuelven una necesidad concreta.
 
-## 2. Estado actual y restricciones verificadas
+## Estado verificado del proyecto
 
-- El repositorio es un scaffold mínimo de React 19 + Vite 8 + TypeScript + Tailwind CSS v4.
-- `src/App.tsx` está vacío salvo por un contenedor; `src/index.css` solo importa Tailwind.
-- No hay design system, router, librería de iconos, backend ni datos preexistentes.
-- El servidor de desarrollo ya está supervisado por Figma Make y no se iniciará otro.
-- No se añadirán dependencias para routing, estado o iconos: la escala del proyecto permite resolverlo con React, History API, estado local y SVG accesibles.
-- El árbol Git está limpio al momento de planificar.
+El plan anterior describía un prototipo sin backend. Ya no representa el proyecto actual. La aplicación pública ya tiene:
 
-## 3. Arquitectura de navegación
+| Área | Implementado | Pendiente para una experiencia más clara |
+| --- | --- | --- |
+| Navegación | SPA con History API, rutas de inicio, catálogo, producto, carrito, pedido y `Mis pedidos`. | Mantener filtros/búsqueda/orden en URL y mejorar los estados recuperables. |
+| Catálogo | API pública con categorías, destacados, variantes de peso fijo, precio, stock e imágenes múltiples. | Búsqueda, orden opcional y carga de imágenes más liviana. |
+| Producto | Selector de peso, límite de cantidad por variante, stock bajo y galería. | CTA visible en móvil, compartir y explicar los cambios de stock posteriores. |
+| Carrito | Persistencia de líneas, límites de stock, subtotal y costo de entrega “A confirmar”. | Mostrar cambios de precio/disponibilidad, confirmar eliminaciones y mantener el formulario al volver al catálogo. |
+| Pedido | API real, revalidación del servidor, clave de idempotencia y estado `A_CONFIRMAR`. | Mensaje de WhatsApp más completo y alternativa clara si no se abre. |
+| Seguimiento | Acceso por email, listado, detalle, eventos e historial. | Progreso, siguiente paso, filtros y repetición con comparación visible. |
+| Responsive y accesibilidad | Diseño mobile-first, controles de 44 px, foco visible y reducción de movimiento. | Auditoría real de teclado, contraste, lector de pantalla y anchos límite. |
 
-Se implementará una SPA con rutas navegables mediante History API y enlaces reales, sin dependencia externa:
+## Alcance
 
-- `/` — Inicio.
-- `/catalogo` — Catálogo; el filtro activo se reflejará en `?categoria=` para conservar navegación y compartir estado.
-- `/producto/:slug` — Detalle de producto.
-- `/carrito` — Carrito, modalidad y datos del cliente.
-- `/pedido/:id` — Confirmación pendiente y derivación a WhatsApp.
+Este documento cubre cambios de React, CSS, navegación, mensajes, estado local no sensible y consumo de los endpoints existentes. No propone simular confirmación de stock, costos, reservas, emails ni autenticación en el cliente.
 
-El manejador de navegación actualizará `history.pushState`, responderá a `popstate`, moverá el foco al contenido principal y hará scroll al inicio. Una ruta o producto desconocido mostrará un estado recuperable con enlace al catálogo.
+Cuando una mejora necesite un dato o acción que el API actual no provee, se especificará como dependencia. Se implementará la interfaz solo después de acordar ese contrato; el frontend no inventará estados ni resultados.
 
-## 4. Modelo de datos y estado
+## Principios de UX
 
-### Catálogo local
+- Un objetivo principal por pantalla: explorar, elegir, revisar, enviar o seguir el pedido.
+- Lenguaje directo: “Enviar pedido”, “Pendiente de confirmación” y “A confirmar”; nunca “compra confirmada” antes de que Rosana confirme.
+- Información progresiva: los detalles se muestran junto a la decisión que ayudan a tomar, no en bloques largos iniciales.
+- Los errores se explican junto al campo o producto afectado y ofrecen una acción de recuperación.
+- El stock mostrado es orientativo; el servidor es la única autoridad al crear el pedido.
+- La información personal no se persistirá en `localStorage`; al volver del catálogo se mantendrá solamente durante la sesión activa de la SPA.
 
-Crear un catálogo tipado de aproximadamente 8 productos repartidos entre Frutos secos, Mixes y Hierbas naturales. Cada producto incluirá:
+## Orden de implementación
 
-- `id`, `slug`, categoría, nombre, descripción y texto alternativo.
-- Imagen editorial seleccionada de Unsplash, con créditos conservados en los metadatos/datos.
-- Ingredientes, alérgenos y conservación.
-- Variantes de peso con `id`, etiqueta, gramos, precio y stock.
-- Indicador de destacado.
+### Fase 0 — Definiciones breves antes de cambiar el flujo
 
-Los datos demostrarán todos los casos del brief: disponible, últimas unidades (umbral constante configurable, inicialmente `5`) y sin stock. Al menos un producto estará totalmente agotado y algunas variantes estarán agotadas para cubrir estados mixtos.
+Confirmar estas decisiones para no construir una interfaz contradictoria:
 
-### Carrito
+- Si retiro local requiere dirección, barrio o ningún dato de ubicación.
+- Si el email es obligatorio. Hoy lo es, porque habilita el acceso seguro a `Mis pedidos`; permitir solo teléfono requeriría cambiar el contrato del pedido y el seguimiento.
+- Texto aprobado para el consentimiento y la explicación de privacidad.
+- Número final configurado mediante `VITE_WHATSAPP_NUMBER`, sin incluirlo en código versionado.
 
-- Estado global en `App`, con líneas identificadas por combinación de producto + variante.
-- Añadir una combinación existente acumula cantidad respetando el stock.
-- El stepper impide bajar de 1 o superar el stock; eliminar quita la línea completa.
-- El carrito se persistirá en `localStorage` para sobrevivir recargas y navegación.
-- Los subtotales se calcularán desde datos fuente, no se almacenarán duplicados.
-- Al restaurar el carrito, se validarán IDs y límites contra el catálogo actual.
+### Fase 1 — Hacer inequívoco el envío de pedido
 
-### Pedido local
+Archivos principales: `src/pages/CartPage.tsx`, `src/pages/SecureOrderPage.tsx`, `src/lib/order-message.ts`, `src/App.tsx` y `src/components/ui.tsx`.
 
-Al enviar un formulario válido:
+1. Reorganizar los datos del carrito en bloques cortos: modalidad, contacto y ubicación.
+2. Separar “Indicaciones para la entrega” de “Contacto adicional”; el campo actual mezcla ambos casos.
+3. Explicar junto al teléfono que se utiliza para coordinar recepción o retiro. Mantener una validación coherente con la decisión de email de la fase 0.
+4. Añadir el consentimiento breve, con enlace a la futura explicación de privacidad, y validarlo de forma accesible. Si debe quedar registrado legalmente, requerirá que el API acepte versión y aceptación.
+5. Elevar el borrador del formulario a `App` para conservarlo al visitar catálogo y regresar, pero vaciarlo al crear exitosamente el pedido o salir de la sesión.
+6. Conservar el bloqueo actual por envío y la clave de idempotencia; mejorar el texto de carga y los errores de red para indicar qué puede hacer la persona sin volver a llenar el pedido.
+7. Completar el mensaje de WhatsApp con fecha y hora del pedido, referencia, email y enlace a `Mis pedidos`. Mantener el aviso de que aún no se reservaron unidades.
+8. Abrir WhatsApp desde una acción de usuario y detectar el bloqueo solo como heurística (`window.open` devuelve `null`); no es detectable con certeza en todos los navegadores. Ante falla, mostrar de inmediato el mensaje listo para copiar y el botón de reenvío.
 
-1. Crear un objeto local con identificador legible (prefijo `RF-` más una porción de timestamp), líneas, subtotal, modalidad, dirección cuando corresponda, nombre, teléfono, fecha y estado `pending`.
-2. Guardar el último pedido en `sessionStorage` para que la pantalla sobreviva una recarga de la sesión.
-3. Vaciar el carrito y navegar a `/pedido/:id`.
-4. Generar el mensaje de WhatsApp exactamente con el orden y lenguaje definidos en el brief.
+**Resultado:** una persona entiende qué datos entrega, por qué se los piden y cómo finalizar incluso si WhatsApp no abre.
 
-No se simulará una confirmación exitosa de compra ni se descontará stock.
+### Fase 2 — Hacer confiables carrito, precio y disponibilidad
 
-## 5. Sistema visual
+Archivos principales: `src/App.tsx`, `src/pages/CartPage.tsx`, `src/components/product.tsx`.
 
-### Tokens y tipografía
+1. Guardar en cada línea del carrito el precio que se vio al agregarla, además de la variante y cantidad.
+2. Al recibir un catálogo actualizado, comparar cada línea contra precio y stock actuales en lugar de quitar variantes silenciosamente.
+3. Mostrar una alerta por línea cuando una presentación se agotó, la cantidad fue ajustada o el precio cambió. La persona podrá quitarla o corregirla antes de enviar.
+4. Mantener la validación definitiva al crear el pedido en Django y mostrar los errores de revalidación en el carrito, no como un fallo genérico.
+5. Añadir una confirmación accesible al eliminar una línea cuando pueda resultar accidental, con foco controlado y posibilidad de cancelar.
+6. Conservar visible “Entrega: A confirmar” y explicar que depende de la zona, sin estimar valores no definidos.
+7. Añadir resumen imprimible/descargable del pedido solo después de validar que no revele más datos de los necesarios en un dispositivo compartido.
 
-En `src/index.css`:
+**Resultado:** el carrito no da una falsa sensación de disponibilidad ni oculta cambios relevantes.
 
-- Importar primero Tailwind y las fuentes públicas Google `Fraunces` (600/700) y `DM Sans` (400/500/600/700).
-- Definir tokens semánticos de Tailwind v4/CSS para cream, olive, terracotta, sand, charcoal y white según los valores entregados.
-- Definir familias tipográficas, radios, sombras suaves, transiciones, foco visible y estilos base.
-- Mantener fondo `cream-50`, superficies elevadas blancas, títulos oliva oscuro y acción primaria terracota.
-- Incluir `prefers-reduced-motion` y evitar animación no esencial cuando esté activo.
+### Fase 3 — Facilitar encontrar y elegir productos
 
-### Dirección de arte
+Archivos principales: `src/pages/CatalogPage.tsx`, `src/pages/ProductPage.tsx`, `src/components/product.tsx`, `src/components/layout.tsx`.
 
-- Apariencia de despensa local cuidada: fondos mate, serif editorial en encabezados, bordes orgánicos suaves, poco ruido decorativo y jerarquía generosa.
-- Fotografías de frutos secos, mixes y hierbas en luz natural. Se usarán URLs concretas de Unsplash ya investigadas, no endpoints aleatorios; por ejemplo, fotografías de Maja Vujic para castañas de cajú y Nathan Dumlao/Pavel Avakumov para hierbas secas.
-- Recortes `object-cover` consistentes, imágenes 1:1 en tarjetas y una composición editorial más amplia en hero/detalle.
-- Los estados nunca dependerán solo del color: siempre incluirán texto y, cuando aporte claridad, icono.
+1. Añadir una búsqueda por nombre, con resultado vacío explicativo y opción de limpiar.
+2. Mantener categoría, búsqueda y orden en la URL para que atrás, adelante y enlaces compartidos preserven el contexto.
+3. Incorporar orden solo si el catálogo ya tiene volumen suficiente: destacados como valor inicial; precio y disponibilidad como opciones secundarias. No sumar filtros que obliguen a pensar de más.
+4. En el detalle, mantener el CTA principal visible en móvil sin cubrir el selector, el aviso de stock ni el contenido final. Ajustar el espacio inferior para convivir con la barra flotante del carrito.
+5. Añadir “Compartir producto” mediante Web Share API y copia de enlace como alternativa.
+6. Revisar que la cantidad exacta de stock bajo se comunique de manera consistente y que las variantes agotadas expliquen qué ocurre antes y después de agregarlas.
+7. Revisar el texto alternativo de portada y galería: específico para la imagen útil, vacío en miniaturas repetidas o decorativas.
+8. Usar el campo ya existente de destacado. Novedades y productos estacionales solo se mostrarán cuando el API exponga su dato, evitando etiquetas simuladas.
 
-## 6. Componentes React
+**Resultado:** elegir un producto y su peso es una tarea breve, predecible y compartible.
 
-Organizar componentes locales y reutilizables, sin introducir un framework de UI:
+### Fase 4 — Dar seguimiento entendible y permitir recomprar con control
 
-- `AppShell`: aviso superior, header mobile/desktop, contenido, footer y barra flotante móvil del carrito.
-- `BrandMark` y `Icon`: logotipo textual y set mínimo de SVG (carrito, flechas, más/menos, check, alerta, ubicación, WhatsApp, Instagram, copiar, papelera, menú/cierre). Todo icono interactivo tendrá nombre accesible.
-- `Button`: primary, secondary, text e icon; soportará disabled/loading y estados hover/pressed/focus desde CSS.
-- `StockBadge`: disponible, últimas unidades, sin stock.
-- `CategoryChip`: estados normal/activo/foco y `aria-pressed`.
-- `ProductCard`: imagen, categoría, presentación inicial, precio desde, stock y acción; sin acción de añadir directa.
-- `WeightSelector`: chips con precio, selección inequívoca y variante agotada deshabilitada.
-- `QuantityStepper`: límites explícitos, botones de al menos 44 × 44 y etiqueta accesible.
-- `FormField`: label persistente, ayuda/error, `aria-describedby` y estado inválido.
-- `DeliveryOption`: tarjetas-radio para retiro y entrega.
-- `CartLine` y `OrderSummary`.
-- `Toast`: región `aria-live` para producto añadido, carrito actualizado y errores locales.
+Archivos principales: `src/pages/SecureOrdersPage.tsx`, `src/pages/SecureOrderPage.tsx`, `src/lib/order-status.ts`, `src/App.tsx`.
 
-Los componentes usarán elementos HTML semánticos internamente porque no existe un design system de componentes en el repositorio; la consistencia se sostendrá con tokens y variantes locales.
+1. En cada pedido, destacar modalidad, subtotal, fecha de creación y última actualización; los datos ya están disponibles.
+2. Traducir los estados actuales a una línea de progreso simple y mostrar un único “siguiente paso esperado” según modalidad y estado. El historial completo seguirá disponible debajo.
+3. Añadir filtros por estado en `Mis pedidos`. Se aplicarán localmente a los pedidos cargados hasta que se acuerde filtrado paginado en el API.
+4. Cambiar “Repetir selección” por una revisión: comparar cada línea histórica con la variante actual y explicar precio, falta de stock o cantidad reducida antes de llegar al carrito.
+5. Añadir “Borrar datos locales de este dispositivo” para carrito y estado de interfaz. El cierre de cuenta y la eliminación real de datos quedan fuera: requieren endpoint y política de retención.
 
-## 7. Pantallas e interacción
+**Resultado:** el cliente no necesita interpretar códigos internos ni confiar en una repetición ciega.
 
-### Inicio
+### Fase 5 — Accesibilidad, responsive y rendimiento de imágenes
 
-- Aviso operativo discreto.
-- Hero editorial con el título y CTA indicados, foto dominante y detalle decorativo sutil.
-- Tres accesos de categoría que abren el catálogo ya filtrado.
-- Grilla/carrusel horizontal mobile de cuatro destacados.
-- Bloque “Así funciona” en cuatro pasos.
-- Bloque de confianza sobre presentaciones, claridad y atención local.
-- CTA final dual hacia Catálogo y WhatsApp.
+Archivos principales: `src/index.css`, `src/components/ui.tsx`, páginas públicas, `src/lib/catalog-api.ts` y galería de backoffice cuando corresponda.
 
-### Catálogo
+1. Recorrer Inicio → Catálogo → Producto → Carrito → Pedido → Mis pedidos solo con teclado; corregir orden de foco, menú, diálogos, campos y avisos vivos.
+2. Verificar contraste WCAG AA en CTA, texto secundario, badges, estados deshabilitados y errores.
+3. Probar lector de pantalla en selector de peso, cantidad, validaciones, carrito y confirmaciones de WhatsApp.
+4. Revisar 320, 390, 768, 1024 y 1440 px, más nombres de producto, precios y errores largos. Ninguna barra flotante podrá ocultar la acción o el contenido final.
+5. Añadir `loading="lazy"` y `decoding="async"` fuera de la imagen principal visible, mantener proporciones para evitar saltos de layout y presentar placeholders discretos.
+6. Preparar `srcset` y `sizes` cuando el backend entregue derivados de imagen. La compresión y generación de tamaños debe ocurrir al cargar o servir imágenes, no depender solo del navegador; el frontend consumirá las URLs optimizadas.
+7. Verificar que las transiciones existentes respeten `prefers-reduced-motion`.
 
-- Introducción, contador derivado y chips de filtro.
-- Dos columnas mobile; tres a cuatro columnas según ancho desktop.
-- Estado vacío con acción “Ver todos”.
-- Tarjetas agotadas visibles pero sin acción de compra directa.
+**Resultado:** la tienda se mantiene legible y ágil en teléfonos modestos, pantallas pequeñas y tecnologías asistivas.
 
-### Detalle
+## Dependencias que no resolverá el frontend
 
-- Diseño apilado mobile y dos columnas desktop.
-- Imagen principal, categoría, nombre, precio reactivo y disponibilidad de la variante seleccionada.
-- Selector de peso; por defecto seleccionará la primera variante con stock.
-- Stepper limitado por stock y CTA fijo/accesible en mobile.
-- “Agregar al carrito” actualiza estado, muestra toast y mantiene al usuario en contexto.
-- Ingredientes, alérgenos y conservación en secciones `details/summary` accesibles.
-- Nota permanente de confirmación de stock y productos relacionados.
+- Registro legal de consentimiento, eliminación de cuenta/datos, retención y privacidad: política y endpoints de servidor.
+- Filtros paginados de pedidos, novedades/estacionales y derivados de imagen: contratos del catálogo/pedidos.
+- Envío de emails, costos de reparto, reservas, cambios de estado y revalidación definitiva: Django y sus procesos operativos.
+- Una detección infalible de bloqueadores de pop-ups: no existe una API web confiable para ello; se implementará recuperación visible.
 
-### Carrito
+## Verificación de cada fase
 
-- Estado vacío ilustrado con SVG suave, mensaje y CTA al catálogo.
-- Líneas editables con miniatura, variante, precio, stepper, subtotal y eliminar.
-- Resumen con subtotal y costo de entrega “A confirmar”.
-- Radios para retiro/entrega.
-- Nombre y teléfono siempre obligatorios; dirección/barrio aparece y pasa a ser obligatoria solo para entrega.
-- Validación al salir del campo y al enviar; foco en el primer error y mensajes junto al control.
-- En desktop, resumen/formulario en panel sticky; en mobile, una sola columna y CTA visible sin tapar contenido.
+- Tests unitarios para plantilla de WhatsApp, persistencia no sensible del borrador, normalización del carrito, cambios de precio/stock, filtros URL y repetición de pedido.
+- Prueba manual de envío con WhatsApp configurado, sin número y con apertura bloqueada.
+- Prueba de pedido con variante agotada, precio modificado, error de red y doble pulsación del CTA.
+- Revisión manual de teclado, lector de pantalla y los cinco anchos definidos.
+- Ejecutar `pnpm test`, `node node_modules/typescript/bin/tsc --noEmit` y `pnpm build` antes de marcar un ítem como terminado en `ToDo.md`.
 
-### Pedido pendiente
+## Criterio de cierre
 
-- “Pedido #… recibido” y etiqueta “Pendiente de confirmación”, nunca “Compra confirmada”.
-- Mensaje prioritario de verificación humana.
-- Resumen completo de líneas, subtotal, modalidad, dirección y datos.
-- Botón “Abrir WhatsApp”, “Copiar mensaje” con feedback accesible y vuelta al catálogo.
-- El número se leerá de `import.meta.env.VITE_WHATSAPP_NUMBER`; jamás se escribirá uno real en código. Con número configurado se abrirá la conversación directa; sin él se usará el enlace de WhatsApp sin destinatario con el mensaje precargado, manteniendo funcional el prototipo.
-- Si no existe el pedido solicitado en sesión, mostrar un estado recuperable en lugar de inventar una confirmación.
-
-## 8. Responsive y accesibilidad
-
-- Mobile-first desde 390 px; adaptación cuidada a 1440 px y anchos intermedios.
-- Contenedor máximo de 1280 px, padding mobile de 16 px y desktop hasta 80 px.
-- Objetivos táctiles mínimos de 44 × 44.
-- Header mobile compacto con navegación desplegable accesible; navegación completa en desktop.
-- Barra flotante del carrito solo en mobile cuando contiene líneas, con cantidad y subtotal.
-- Foco visible de alto contraste, orden DOM lógico, labels persistentes y regiones `aria-live`.
-- Imágenes con alt descriptivo específico; imágenes puramente decorativas con alt vacío.
-- Sin alturas fijas que recorten nombres, precios o errores.
-- Contraste revisado especialmente en terracota/blanco, oliva/blanco, texto secundario y estados disabled; si el terracota propuesto no alcanza AA para texto pequeño, se usará una variante visual más oscura para el fondo interactivo manteniendo el token original en acentos no textuales.
-
-## 9. Organización de archivos prevista
-
-- `src/App.tsx` — estado global, navegación SPA y composición principal.
-- `src/data/products.ts` — tipos, catálogo, umbral de stock y helpers de disponibilidad/precio.
-- `src/components/ui.tsx` — primitivas visuales pequeñas (Button, Icon, badges, chips, campos, toast).
-- `src/components/layout.tsx` — aviso, header, navegación, footer y barra flotante.
-- `src/components/product.tsx` — ProductCard, selector de peso y stepper.
-- `src/pages/HomePage.tsx`
-- `src/pages/CatalogPage.tsx`
-- `src/pages/ProductPage.tsx`
-- `src/pages/CartPage.tsx`
-- `src/pages/OrderPage.tsx`
-- `src/index.css` — imports, tokens Tailwind v4, estilos base y utilidades globales.
-
-Si durante la implementación algún archivo queda trivial, se combinará con su vecino para evitar fragmentación innecesaria, sin cambiar las interfaces descritas.
-
-## 10. Secuencia de implementación
-
-1. Crear tipos y catálogo local con variantes/stock/imágenes.
-2. Definir fonts, tokens y estilos base.
-3. Construir primitivas UI, iconos y layout global.
-4. Implementar navegación SPA y persistencia segura del carrito.
-5. Implementar Inicio y Catálogo.
-6. Implementar Detalle y añadir al carrito.
-7. Implementar Carrito, validación condicional y generación del pedido.
-8. Implementar pantalla pendiente, plantilla/copia/apertura de WhatsApp.
-9. Ajustar responsive, foco, estados vacíos/error/agotado y movimiento reducido.
-10. Formatear y verificar.
-
-## 11. Verificación
-
-### Automatizada
-
-- Ejecutar `pnpm format` usando el script del repositorio.
-- Ejecutar `pnpm build` por tratarse de una implementación amplia, y corregir cualquier error TypeScript/Vite.
-
-### Revisión funcional manual en la preview existente
-
-- Inicio → categoría → producto → cambiar peso → cantidad → añadir.
-- Filtros de las tres categorías, “Todos” y estado vacío demostrable.
-- Variante agotada, producto agotado y umbral de últimas unidades.
-- Carrito: incrementar, decrementar, máximo, eliminar, persistir tras recarga.
-- Ruta retiro: datos válidos → pedido pendiente → mensaje de WhatsApp correcto.
-- Ruta entrega: dirección obligatoria → pedido pendiente → dirección incluida una sola vez.
-- Copiar mensaje y comportamiento sin `VITE_WHATSAPP_NUMBER`.
-- Navegación atrás/adelante y rutas desconocidas.
-- Vistas aproximadas de 390 px y 1440 px, sin overflow ni contenido cubierto.
-- Recorrido por teclado de menú, chips, selector, stepper, formulario y CTAs; foco visible y mensajes anunciables.
-
-## 12. Criterios de cierre
-
-La implementación se considerará completa cuando:
-
-- Las cinco vistas principales sean navegables y visualmente coherentes.
-- Una persona pueda filtrar, elegir peso, añadir, editar y enviar un pedido sin instrucciones externas.
-- Retiro y entrega produzcan el resumen y mensaje especificados.
-- No exista lenguaje que implique cobro, reserva o confirmación automática.
-- Estén visibles y utilizables los casos vacío, agotado, últimas unidades, validación y pedido inexistente.
-- El número de WhatsApp no esté hardcodeado.
-- Formato y build terminen correctamente.
-
-## 13. Fuera de alcance
-
-- Crear o editar un archivo Figma con páginas `00–06`.
-- Backend, base de datos, administración de catálogo o sincronización de stock.
-- Autenticación, pagos, tarifas de reparto o cálculo de cobertura.
-- Envío real de pedidos a un servidor o reserva de inventario.
-- Analytics, SEO avanzado o internacionalización.
+El frontend estará listo cuando una persona nueva pueda encontrar un producto, elegir una presentación, entender por qué deja sus datos, enviar un pedido pendiente, recuperarse de un fallo de WhatsApp y volver a interpretar su estado sin recibir instrucciones. Ningún texto o estado de interfaz debe afirmar que hay reserva, pago, entrega o confirmación si Django y Rosana todavía no lo validaron.

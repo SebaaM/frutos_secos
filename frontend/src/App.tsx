@@ -19,10 +19,7 @@ import BackofficeAccess from "./backoffice/BackofficeAccess"
 
 import { submitOrder, type ApiOrder, type OrderContact } from "./lib/order-api"
 
-import CartPage, {
-  type CartLine,
-  type ResolvedCartLine,
-} from "./pages/CartPage"
+import CartPage from "./pages/CartPage"
 
 import CatalogPage from "./pages/CatalogPage"
 
@@ -33,6 +30,12 @@ import OrderPage from "./pages/SecureOrderPage"
 import OrdersPage from "./pages/SecureOrdersPage"
 
 import ProductPage from "./pages/ProductPage"
+
+import {
+  emptyCheckoutDraft,
+  type CartLine,
+  type ResolvedCartLine,
+} from "./lib/cart"
 
 const CART_KEY = "rosana-cart-v1"
 
@@ -48,15 +51,21 @@ function normalizeCart(value: unknown, products: Product[]): CartLine[] {
         (item) => item.id === line.variantId,
       )
 
-      if (!product || !variant || variant.stock <= 0) return null
+      if (!product || !variant) return null
 
-      const quantity = Math.max(
-        1,
+      const quantity = Math.max(1, Number(line.quantity) || 1)
 
-        Math.min(Number(line.quantity) || 1, variant.stock),
-      )
+      const priceAtAdd = Number(line.priceAtAdd)
 
-      return { productId: product.id, variantId: variant.id, quantity }
+      return {
+        productId: product.id,
+
+        variantId: variant.id,
+
+        quantity,
+
+        priceAtAdd: Number.isFinite(priceAtAdd) ? priceAtAdd : variant.price,
+      }
     })
 
     .filter((line): line is CartLine => Boolean(line))
@@ -110,8 +119,13 @@ export default function App() {
 
   const [lastOrder, setLastOrder] = useState<ApiOrder | null>(null)
 
+  const [checkoutDraft, setCheckoutDraft] = useState(emptyCheckoutDraft)
+
+  const [cartNotice, setCartNotice] = useState("")
+
   const orderAttempt = useRef<{
     payload: string
+
     key: string
   } | null>(null)
 
@@ -181,7 +195,7 @@ export default function App() {
     return () => window.clearTimeout(timeout)
   }, [toast])
 
-  const navigate = (target: string) => {
+  const navigate = (target: string, replace = false) => {
     const url = new URL(target, window.location.origin)
 
     if (
@@ -190,7 +204,13 @@ export default function App() {
     )
       return
 
-    window.history.pushState({}, "", `${url.pathname}${url.search}`)
+    window.history[replace ? "replaceState" : "pushState"](
+      {},
+
+      "",
+
+      `${url.pathname}${url.search}`,
+    )
 
     setLocation({ path: url.pathname, search: url.search })
 
@@ -224,6 +244,12 @@ export default function App() {
             variant,
 
             subtotal: variant.price * line.quantity,
+
+            priceChanged: line.priceAtAdd !== variant.price,
+
+            unavailable: variant.stock <= 0,
+
+            quantityUnavailable: line.quantity > variant.stock,
           },
         ]
       }),
@@ -256,7 +282,15 @@ export default function App() {
         return [
           ...current,
 
-          { productId: product.id, variantId: variant.id, quantity },
+          {
+            productId: product.id,
+
+            variantId: variant.id,
+
+            quantity,
+
+            priceAtAdd: variant.price,
+          },
         ]
 
       return current.map((line) =>
@@ -280,10 +314,12 @@ export default function App() {
 
     quantity: number,
   ) => {
+    setCartNotice("")
+
     setCart((current) =>
       current.map((line) =>
         line.productId === productId && line.variantId === variantId
-          ? { ...line, quantity }
+          ? { ...line, quantity: Math.max(1, quantity) }
           : line,
       ),
     )
@@ -292,6 +328,21 @@ export default function App() {
   }
 
   const removeLine = (productId: string, variantId: string) => {
+    const line = cart.find(
+      (item) => item.productId === productId && item.variantId === variantId,
+    )
+
+    if (
+      line &&
+      line.quantity > 1 &&
+      !window.confirm(
+        `Vas a quitar ${line.quantity} unidades de esta presentación. ¿Querés continuar?`,
+      )
+    )
+      return
+
+    setCartNotice("")
+
     setCart((current) =>
       current.filter(
         (line) =>
@@ -312,12 +363,16 @@ export default function App() {
 
     const payload = {
       ...contact,
+
       email: contact.email.toLowerCase(),
+
       address_help: addressHelp,
 
       lines: resolvedLines.map((line) => ({
         variant_id: Number(line.variant.id),
+
         quantity: line.quantity,
+
         expected_unit_price: line.variant.price.toFixed(2),
       })),
     }
@@ -329,6 +384,7 @@ export default function App() {
 
     const order = await submitOrder({
       ...payload,
+
       idempotency_key: orderAttempt.current.key,
     })
 
@@ -338,14 +394,21 @@ export default function App() {
 
     setCart([])
 
+    setCheckoutDraft(emptyCheckoutDraft)
+
+    setCartNotice("")
+
     navigate(`/pedido/${order.id}`)
   }
 
   const repeatOrder = (order: ApiOrder) => {
     if (!catalogLoaded || catalogError) {
       setToast("Actualizá el catálogo antes de repetir el pedido.")
+
       return
     }
+
+    const changes: string[] = []
 
     const repeatedLines = order.lines.flatMap((line) => {
       const product = products.find(
@@ -356,7 +419,23 @@ export default function App() {
         (item) => item.id === String(line.variant_id),
       )
 
-      if (!product || !variant || variant.stock <= 0) return []
+      if (!product || !variant || variant.stock <= 0) {
+        changes.push(
+          `${line.product_name} ${line.weight_grams} g ya no está disponible.`,
+        )
+
+        return []
+      }
+
+      if (Number(line.unit_price) !== variant.price)
+        changes.push(
+          `${line.product_name} ${line.weight_grams} g cambió de precio.`,
+        )
+
+      if (line.quantity > variant.stock)
+        changes.push(
+          `${line.product_name} ${line.weight_grams} g ahora permite ${variant.stock} unidades.`,
+        )
 
       return [
         {
@@ -365,11 +444,19 @@ export default function App() {
           variantId: variant.id,
 
           quantity: Math.min(line.quantity, variant.stock),
+
+          priceAtAdd: variant.price,
         },
       ]
     })
 
     setCart(repeatedLines)
+
+    setCartNotice(
+      changes.length
+        ? `Revisamos tu selección anterior: ${changes.join(" ")}`
+        : "La selección sigue disponible con sus precios actuales.",
+    )
 
     setToast(
       repeatedLines.length
@@ -431,6 +518,9 @@ export default function App() {
         updateQuantity={updateQuantity}
         removeLine={removeLine}
         createOrder={createOrder}
+        draft={checkoutDraft}
+        onDraftChange={setCheckoutDraft}
+        notice={cartNotice}
       />
     )
   } else if (location.path === "/mis-pedidos") {
@@ -439,6 +529,15 @@ export default function App() {
         navigate={navigate}
         onRepeat={repeatOrder}
         onLogout={() => setLastOrder(null)}
+        onClearLocal={() => {
+          setCart([])
+
+          setCheckoutDraft(emptyCheckoutDraft)
+
+          setCartNotice("")
+
+          setToast("Se borraron los datos guardados en este dispositivo.")
+        }}
       />
     )
   } else if (location.path.startsWith("/pedido/")) {
@@ -464,6 +563,9 @@ export default function App() {
       path={location.path}
       cartCount={count}
       cartSubtotal={subtotal}
+      cartLines={resolvedLines}
+      updateQuantity={updateQuantity}
+      removeLine={removeLine}
     >
       {page}
       {toast ? <Toast message={toast} onClose={() => setToast("")} /> : null}

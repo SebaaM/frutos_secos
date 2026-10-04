@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useState } from "react"
+
 import type { Navigate } from "../components/layout"
+
 import {
   ProductCard,
   QuantityStepper,
   WeightSelector,
 } from "../components/product"
+
 import { Button, Eyebrow, Icon, StockBadge } from "../components/ui"
+
 import {
   categoryLabels,
   formatPrice,
@@ -16,61 +20,108 @@ import {
 
 export default function ProductPage({
   product,
+
   products,
+
   navigate,
+
   onAdd,
 }: {
   product: Product
+
   products: Product[]
+
   navigate: Navigate
+
   onAdd: (product: Product, variant: ProductVariant, quantity: number) => void
 }) {
   const firstAvailable = product.variants.find((variant) => variant.stock > 0)
+
   const images = product.images?.length
     ? product.images
     : [
         {
           id: "cover",
+
           url: product.image,
+
           alt: product.imageAlt,
+
           credit: product.imageCredit,
+
           position: 0,
         },
       ]
+
   const [selectedId, setSelectedId] = useState(firstAvailable?.id ?? "")
+
   const [selectedImageId, setSelectedImageId] = useState(images[0]?.id ?? "")
+
   const [quantity, setQuantity] = useState(1)
+
+  const [shareMessage, setShareMessage] = useState("")
 
   useEffect(() => {
     setSelectedId(
       product.variants.find((variant) => variant.stock > 0)?.id ?? "",
     )
+
     setSelectedImageId(images[0]?.id ?? "")
+
     setQuantity(1)
   }, [product.id])
 
   const selected = product.variants.find((variant) => variant.id === selectedId)
+
   const selectedImage =
     images.find((image) => image.id === selectedImageId) ?? images[0]
+
   const related = useMemo(
     () =>
       products
+
         .filter(
           (item) =>
             item.category === product.category && item.id !== product.id,
         )
+
         .slice(0, 3),
+
     [product],
   )
+
   const state = getStockState(selected?.stock ?? 0)
 
   const selectVariant = (variant: ProductVariant) => {
     setSelectedId(variant.id)
+
     setQuantity(1)
   }
 
+  const shareProduct = async () => {
+    const shareData = {
+      title: product.name,
+      text: product.name,
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share) await navigator.share(shareData)
+      else {
+        await navigator.clipboard.writeText(window.location.href)
+
+        setShareMessage("Enlace copiado.")
+      }
+    } catch (error) {
+      if ((error as Error).name !== "AbortError")
+        setShareMessage(
+          "No pudimos compartir. Copiá el enlace desde tu navegador.",
+        )
+    }
+  }
+
   return (
-    <div className="page-container py-7 md:py-14">
+    <div className="page-container py-7 pb-28 md:py-14">
       <button
         type="button"
         onClick={() => navigate("/catalogo")}
@@ -86,6 +137,7 @@ export default function ProductPage({
               <img
                 src={selectedImage.url}
                 alt={selectedImage.alt}
+                decoding="async"
                 className="size-full object-cover"
               />
             ) : null}
@@ -108,7 +160,13 @@ export default function ProductPage({
                       : "border-transparent"
                   }`}
                 >
-                  <img src={image.url} alt="" className="size-full object-cover" />
+                  <img
+                    src={image.url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="size-full object-cover"
+                  />
                 </button>
               ))}
             </div>
@@ -121,13 +179,31 @@ export default function ProductPage({
         </div>
 
         <div className="lg:pt-5">
-          <Eyebrow>{product.categoryName || categoryLabels[product.category] || product.category}</Eyebrow>
+          <Eyebrow>
+            {product.categoryName ||
+              categoryLabels[product.category] ||
+              product.category}
+          </Eyebrow>
           <h1 className="font-display text-5xl leading-none font-semibold text-olive-dark md:text-6xl">
             {product.name}
           </h1>
           <p className="mt-5 text-base leading-relaxed text-charcoal/70">
             {product.description}
           </p>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => void shareProduct()}
+              className="inline-flex min-h-11 items-center gap-2 rounded-control px-3 text-sm font-bold text-olive-dark hover:bg-cream-soft focus-visible:outline-3 focus-visible:outline-olive"
+            >
+              <Icon name="copy" className="size-4" /> Compartir producto
+            </button>
+            {shareMessage ? (
+              <p role="status" className="mt-1 text-xs text-charcoal/65">
+                {shareMessage}
+              </p>
+            ) : null}
+          </div>
 
           <div className="my-7 flex items-end justify-between border-y border-sand/25 py-5">
             <div>
@@ -183,7 +259,7 @@ export default function ProductPage({
             }
             onClick={() => selected && onAdd(product, selected, quantity)}
             icon="bag"
-            className="mt-7 w-full md:w-auto md:min-w-64"
+            className="mt-7 hidden w-full md:inline-flex md:w-auto md:min-w-64"
           >
             {selected ? "Agregar al carrito" : "Sin stock"}
           </Button>
@@ -202,7 +278,9 @@ export default function ProductPage({
           <div className="mt-8 divide-y divide-sand/25 border-y border-sand/25">
             {[
               ["Ingredientes", product.ingredients],
+
               ["Alérgenos", product.allergens],
+
               ["Conservación", product.storage],
             ].map(([title, content]) => (
               <details key={title} className="group py-4">
@@ -220,6 +298,22 @@ export default function ProductPage({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="fixed right-3 bottom-3 left-3 z-40 md:hidden">
+        <Button
+          disabled={
+            !selected ||
+            selected.stock <= 0 ||
+            quantity < 1 ||
+            quantity > (selected?.stock ?? 0)
+          }
+          onClick={() => selected && onAdd(product, selected, quantity)}
+          icon="bag"
+          className="w-full shadow-xl"
+        >
+          {selected ? `Agregar ${selected.label} al carrito` : "Sin stock"}
+        </Button>
       </div>
 
       {related.length ? (

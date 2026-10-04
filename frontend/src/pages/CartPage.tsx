@@ -1,27 +1,15 @@
 import { useState, type FormEvent } from "react"
+
 import type { Navigate } from "../components/layout"
 import { QuantityStepper } from "../components/product"
-import type { OrderContact } from "../lib/order-api"
 import { Button, Eyebrow, FormField, Icon } from "../components/ui"
+import { formatPrice } from "../data/products"
 import {
-  formatPrice,
-  type Product,
-  type ProductVariant,
-} from "../data/products"
-
-export type CartLine = {
-  productId: string
-  variantId: string
-  quantity: number
-}
-
-export type DeliveryMethod = "retiro_local" | "entrega_local"
-
-export type ResolvedCartLine = CartLine & {
-  product: Product
-  variant: ProductVariant
-  subtotal: number
-}
+  cartLineNeedsReview,
+  type CheckoutDraft,
+  type ResolvedCartLine,
+} from "../lib/cart"
+import type { OrderContact } from "../lib/order-api"
 
 export default function CartPage({
   lines,
@@ -30,6 +18,9 @@ export default function CartPage({
   updateQuantity,
   removeLine,
   createOrder,
+  draft,
+  onDraftChange,
+  notice,
 }: {
   lines: ResolvedCartLine[]
   subtotal: number
@@ -41,16 +32,19 @@ export default function CartPage({
   ) => void
   removeLine: (productId: string, variantId: string) => void
   createOrder: (data: OrderContact) => Promise<void>
+  draft: CheckoutDraft
+  onDraftChange: (draft: CheckoutDraft) => void
+  notice: string
 }) {
-  const [delivery, setDelivery] = useState<DeliveryMethod>("retiro_local")
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
-  const [address, setAddress] = useState("")
-  const [addressHelp, setAddressHelp] = useState("")
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState(false)
   const [submitError, setSubmitError] = useState("")
+  const needsReview = lines.some(cartLineNeedsReview)
+
+  const setField = <Key extends keyof CheckoutDraft,>(
+    field: Key,
+    value: CheckoutDraft[Key],
+  ) => onDraftChange({ ...draft, [field]: value })
 
   if (!lines.length) {
     return (
@@ -75,12 +69,12 @@ export default function CartPage({
 
   const validate = () => {
     const next: Record<string, string> = {}
-    if (!name.trim()) next.name = "Ingresá tu nombre."
-    if (phone.trim() && phone.replace(/\D/g, "").length < 8)
+    if (!draft.name.trim()) next.name = "Ingresá tu nombre."
+    if (draft.phone.trim() && draft.phone.replace(/\D/g, "").length < 8)
       next.phone = "Revisá el número de teléfono."
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(draft.email.trim()))
       next.email = "Revisá el email."
-    if (delivery === "entrega_local" && !address.trim())
+    if (draft.delivery === "entrega_local" && !draft.address.trim())
       next.address = "Ingresá una dirección o barrio."
     setErrors(next)
     return next
@@ -88,7 +82,7 @@ export default function CartPage({
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    if (busy) return
+    if (busy || needsReview) return
     const next = validate()
     if (Object.keys(next).length) {
       window.setTimeout(
@@ -100,13 +94,20 @@ export default function CartPage({
     setBusy(true)
     setSubmitError("")
     try {
+      const addressHelp = [
+        draft.addressHelp.trim() && `Indicaciones: ${draft.addressHelp.trim()}`,
+        draft.additionalContact.trim() &&
+          `Contacto adicional: ${draft.additionalContact.trim()}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
       await createOrder({
-        delivery,
-        address: address.trim(),
-        addressHelp: addressHelp.trim(),
-        name: name.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
+        delivery: draft.delivery,
+        address: draft.address.trim(),
+        addressHelp,
+        name: draft.name.trim(),
+        phone: draft.phone.trim(),
+        email: draft.email.trim(),
       })
     } catch (error) {
       setSubmitError((error as Error).message)
@@ -126,6 +127,15 @@ export default function CartPage({
           Revisá presentaciones y cantidades antes de enviar.
         </p>
       </div>
+
+      {notice ? (
+        <p
+          role="status"
+          className="mb-6 rounded-control bg-cream-soft p-4 text-sm"
+        >
+          {notice}
+        </p>
+      ) : null}
 
       <form
         onSubmit={handleSubmit}
@@ -148,6 +158,8 @@ export default function CartPage({
                     <img
                       src={line.product.image}
                       alt=""
+                      loading="lazy"
+                      decoding="async"
                       className="aspect-square size-[84px] rounded-control object-cover md:size-[100px]"
                     />
                     <div className="min-w-0">
@@ -160,6 +172,20 @@ export default function CartPage({
                       <p className="mt-1 text-xs text-charcoal/55">
                         {formatPrice(line.variant.price)} por unidad
                       </p>
+                      {line.unavailable ? (
+                        <p className="mt-2 text-xs font-bold text-terracotta-dark">
+                          Esta presentación se agotó. Quitala para continuar.
+                        </p>
+                      ) : line.quantityUnavailable ? (
+                        <p className="mt-2 text-xs font-bold text-terracotta-dark">
+                          Ahora hay {line.variant.stock} disponibles. Ajustá la
+                          cantidad.
+                        </p>
+                      ) : line.priceChanged ? (
+                        <p className="mt-2 text-xs font-bold text-stock-warning">
+                          El precio cambió desde que la agregaste.
+                        </p>
+                      ) : null}
                       <div className="mt-3 flex flex-wrap items-center gap-3 md:hidden">
                         <QuantityStepper
                           compact
@@ -247,7 +273,7 @@ export default function CartPage({
                   <label
                     key={option.id}
                     className={`flex cursor-pointer gap-4 rounded-card border p-5 transition focus-within:outline-3 focus-within:outline-offset-2 focus-within:outline-olive ${
-                      delivery === option.id
+                      draft.delivery === option.id
                         ? "border-olive bg-cream-soft"
                         : "border-sand/35 bg-white hover:border-olive/60"
                     }`}
@@ -256,16 +282,16 @@ export default function CartPage({
                       type="radio"
                       name="delivery"
                       value={option.id}
-                      checked={delivery === option.id}
+                      checked={draft.delivery === option.id}
                       onChange={() => {
-                        setDelivery(option.id)
+                        setField("delivery", option.id)
                         setErrors((current) => ({ ...current, address: "" }))
                       }}
                       className="sr-only"
                     />
                     <span
                       className={`grid size-11 shrink-0 place-items-center rounded-full ${
-                        delivery === option.id
+                        draft.delivery === option.id
                           ? "bg-olive text-white"
                           : "bg-cream-soft text-olive"
                       }`}
@@ -275,7 +301,7 @@ export default function CartPage({
                     <span>
                       <span className="flex items-center gap-2 font-bold text-olive-dark">
                         {option.title}
-                        {delivery === option.id ? (
+                        {draft.delivery === option.id ? (
                           <Icon name="check" className="size-4 text-olive" />
                         ) : null}
                       </span>
@@ -293,18 +319,18 @@ export default function CartPage({
                 id="customer-title"
                 className="font-display text-3xl font-semibold text-olive-dark"
               >
-                Tus datos
+                Datos para coordinar
               </h2>
               <p className="mt-2 text-sm text-charcoal/60">
-                Solo necesitamos lo mínimo para responderte.
+                Usamos estos datos solo para preparar y seguir tu pedido.
               </p>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 <FormField
                   id="name"
                   label="Nombre"
-                  value={name}
+                  value={draft.name}
                   onChange={(value) => {
-                    setName(value)
+                    setField("name", value)
                     setErrors((current) => ({ ...current, name: "" }))
                   }}
                   error={errors.name}
@@ -314,69 +340,71 @@ export default function CartPage({
                 <FormField
                   id="phone"
                   label="Teléfono"
-                  value={phone}
+                  value={draft.phone}
                   onChange={(value) => {
-                    setPhone(value)
-                    setErrors((current) => ({
-                      ...current,
-                      phone: "",
-                      email: "",
-                    }))
+                    setField("phone", value)
+                    setErrors((current) => ({ ...current, phone: "" }))
                   }}
                   error={errors.phone}
                   placeholder="Ej. 11 2345 6789"
                   type="tel"
                   autoComplete="tel"
-                  help="Opcional. Nos ayuda a coordinar la entrega o el retiro."
+                  help="Opcional. Lo usamos para coordinar la recepción o el retiro."
                 />
                 <FormField
                   id="email"
                   label="Email"
-                  value={email}
+                  value={draft.email}
                   onChange={(value) => {
-                    setEmail(value)
-                    setErrors((current) => ({
-                      ...current,
-                      phone: "",
-                      email: "",
-                    }))
+                    setField("email", value)
+                    setErrors((current) => ({ ...current, email: "" }))
                   }}
                   error={errors.email}
                   placeholder="nombre@ejemplo.com"
                   type="email"
                   autoComplete="email"
-                  help="Obligatorio para seguir tus pedidos mediante un enlace de acceso, sin contraseña."
+                  help="Lo necesitás para consultar tus pedidos mediante un enlace seguro."
                 />
                 <div className="sm:col-span-2">
                   <FormField
                     id="address"
                     label={
-                      delivery === "entrega_local"
+                      draft.delivery === "entrega_local"
                         ? "Dirección o barrio"
                         : "Barrio de referencia (opcional)"
                     }
-                    value={address}
+                    value={draft.address}
                     onChange={(value) => {
-                      setAddress(value)
+                      setField("address", value)
                       setErrors((current) => ({ ...current, address: "" }))
                     }}
                     error={errors.address}
                     placeholder="Calle, altura y barrio"
                     autoComplete="street-address"
                     help={
-                      delivery === "entrega_local"
+                      draft.delivery === "entrega_local"
                         ? "La cobertura y el costo se confirman por WhatsApp."
-                        : "La usamos como referencia; el retiro se coordina por WhatsApp."
+                        : "El retiro se coordina por WhatsApp."
                     }
                   />
                 </div>
                 <div className="sm:col-span-2">
                   <FormField
                     id="address-help"
-                    label="Ayuda para la dirección o contacto adicional (opcional)"
-                    value={addressHelp}
-                    onChange={setAddressHelp}
-                    placeholder="Entre calles, piso, referencia, otro teléfono o persona de contacto"
+                    label="Indicaciones para la entrega (opcional)"
+                    value={draft.addressHelp}
+                    onChange={(value) => setField("addressHelp", value)}
+                    placeholder="Entre calles, piso o referencia"
+                    multiline
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <FormField
+                    id="additional-contact"
+                    label="Contacto adicional (opcional)"
+                    value={draft.additionalContact}
+                    onChange={(value) => setField("additionalContact", value)}
+                    placeholder="Otra persona o teléfono para coordinar"
                     multiline
                   />
                 </div>
@@ -409,20 +437,24 @@ export default function CartPage({
             </div>
             <Button
               type="submit"
-              disabled={busy}
+              disabled={busy || needsReview}
               icon="whatsapp"
               className="w-full bg-terracotta hover:bg-terracotta-dark"
             >
-              {busy ? "Guardando pedido…" : "Continuar a WhatsApp"}
+              {busy
+                ? "Guardando pedido…"
+                : needsReview
+                  ? "Revisá los cambios"
+                  : "Continuar a WhatsApp"}
             </Button>
-            {submitError && (
+            {submitError ? (
               <p
                 role="alert"
                 className="mt-4 rounded-control bg-white p-3 text-sm text-terracotta-dark"
               >
                 {submitError}
               </p>
-            )}
+            ) : null}
             <p className="mt-4 text-center text-[11px] leading-relaxed text-white/55">
               Al continuar, creamos un pedido pendiente. Stock, pago y entrega
               se confirman personalmente.

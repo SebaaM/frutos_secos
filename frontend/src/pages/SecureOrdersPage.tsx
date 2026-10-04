@@ -1,8 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react"
+
 import type { Navigate } from "../components/layout"
+
 import { Button, Eyebrow, FormField } from "../components/ui"
+
 import { formatPrice } from "../data/products"
+
 import { ApiError } from "../lib/api"
+
 import {
   customerLogout,
   getSession,
@@ -11,73 +16,111 @@ import {
   verifyAccess,
   type ApiOrder,
 } from "../lib/order-api"
-import { orderDate } from "../lib/order-status"
+
+import { orderDate, statusLabels } from "../lib/order-status"
 
 export default function OrdersPage({
   navigate,
+
   onRepeat,
+
   onLogout,
+
+  onClearLocal,
 }: {
   navigate: Navigate
+
   onRepeat: (order: ApiOrder) => void
+
   onLogout: () => void
+
+  onClearLocal: () => void
 }) {
   const [token, setToken] = useState(() => {
     const token =
       new URLSearchParams(window.location.hash.slice(1)).get("token") || ""
+
     return token
   })
+
   const [email, setEmail] = useState("")
+
   const [customer, setCustomer] = useState<string | null>(null)
+
   const [orders, setOrders] = useState<ApiOrder[]>([])
+
   const [page, setPage] = useState(1)
+
   const [hasMore, setHasMore] = useState(false)
+
   const [busy, setBusy] = useState(false)
+
   const [loading, setLoading] = useState(true)
+
   const [error, setError] = useState("")
+
   const [message, setMessage] = useState("")
+
+  const [statusFilter, setStatusFilter] = useState("")
 
   const reload = useCallback(async () => {
     setLoading(true)
+
     setError("")
+
     try {
       const session = await getSession()
+
       setCustomer(session.customer?.email || null)
+
       if (session.customer) {
         const result = await listCustomerOrders()
+
         setOrders(result.results)
+
         setPage(1)
+
         setHasMore(Boolean(result.next))
       } else {
         setOrders([])
       }
     } catch (error) {
       setError((error as Error).message)
+
       if (error instanceof ApiError && error.status === 403) {
         setCustomer(null)
+
         setOrders([])
       }
     } finally {
       setLoading(false)
     }
   }, [])
+
   useEffect(() => {
     void reload()
   }, [reload])
+
   useEffect(() => {
     if (window.location.hash.includes("token="))
       window.history.replaceState(
         {},
+
         "",
+
         window.location.pathname + window.location.search,
       )
   }, [])
 
   async function act(task: () => Promise<unknown>) {
     if (busy) return
+
     setBusy(true)
+
     setError("")
+
     setMessage("")
+
     try {
       await task()
     } catch (error) {
@@ -86,13 +129,20 @@ export default function OrdersPage({
       setBusy(false)
     }
   }
+
   async function request(event: FormEvent) {
     event.preventDefault()
+
     await act(async () => {
       const result = await requestAccess(email.trim())
+
       setMessage(result.detail)
     })
   }
+
+  const visibleOrders = statusFilter
+    ? orders.filter((order) => order.status === statusFilter)
+    : orders
 
   return (
     <div className="page-container space-y-6 py-9 md:py-14">
@@ -128,7 +178,9 @@ export default function OrdersPage({
             onClick={() =>
               void act(async () => {
                 await verifyAccess(token)
+
                 setToken("")
+
                 await reload()
               })
             }
@@ -190,13 +242,30 @@ export default function OrdersPage({
                 onClick={() =>
                   void act(async () => {
                     await customerLogout()
+
                     setOrders([])
+
                     setCustomer(null)
+
                     onLogout()
                   })
                 }
               >
                 Cerrar sesión
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Se borrarán el carrito y los datos del formulario guardados en este dispositivo. Tus pedidos seguirán disponibles desde tu email. ¿Querés continuar?",
+                    )
+                  )
+                    onClearLocal()
+                }}
+              >
+                Borrar datos locales
               </Button>
             </div>
           </div>
@@ -205,8 +274,30 @@ export default function OrdersPage({
               Todavía no hay pedidos para esta cuenta.
             </p>
           )}
+          {orders.length ? (
+            <label className="flex max-w-sm items-center gap-3 text-sm font-bold text-olive-dark">
+              Estado
+              <select
+                className="min-h-11 flex-1 rounded-control border border-sand/45 bg-white px-3 font-normal text-charcoal"
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="">Todos</option>
+                {Object.entries(statusLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          {orders.length && !visibleOrders.length ? (
+            <p className="rounded-card bg-cream-soft p-5 text-sm">
+              No hay pedidos con ese estado entre los que cargaste.
+            </p>
+          ) : null}
           <div className="grid gap-4 md:grid-cols-2">
-            {orders.map((order) => (
+            {visibleOrders.map((order) => (
               <article
                 key={order.id}
                 className="min-w-0 space-y-4 rounded-card bg-white p-5 shadow-card"
@@ -225,10 +316,12 @@ export default function OrdersPage({
                 </p>
                 <p className="break-words text-sm">
                   {order.lines
+
                     .map(
                       (line) =>
                         `${line.product_name} ${line.weight_grams} g × ${line.quantity}`,
                     )
+
                     .join(" · ")}
                 </p>
                 <p className="font-bold">
@@ -252,8 +345,11 @@ export default function OrdersPage({
               onClick={() =>
                 void act(async () => {
                   const result = await listCustomerOrders(page + 1)
+
                   setOrders((current) => [...current, ...result.results])
+
                   setPage((current) => current + 1)
+
                   setHasMore(Boolean(result.next))
                 })
               }

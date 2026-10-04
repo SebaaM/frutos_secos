@@ -1,8 +1,14 @@
-import { useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+
+import { QuantityStepper } from "./product"
+
 import { formatPrice } from "../data/products"
+
+import { cartLineNeedsReview, type ResolvedCartLine } from "../lib/cart"
+
 import { Button, Icon } from "./ui"
 
-export type Navigate = (path: string) => void
+export type Navigate = (path: string, replace?: boolean) => void
 
 function BrandMark({ onClick }: { onClick: () => void }) {
   return (
@@ -29,11 +35,15 @@ function BrandMark({ onClick }: { onClick: () => void }) {
 
 function NavLink({
   active,
+
   children,
+
   onClick,
 }: {
   active: boolean
+
   children: ReactNode
+
   onClick: () => void
 }) {
   return (
@@ -51,20 +61,58 @@ function NavLink({
 
 export function AppShell({
   children,
+
   navigate,
+
   path,
+
   cartCount,
+
   cartSubtotal,
+
+  cartLines,
+
+  updateQuantity,
+
+  removeLine,
 }: {
   children: ReactNode
+
   navigate: Navigate
+
   path: string
+
   cartCount: number
+
   cartSubtotal: number
+
+  cartLines: ResolvedCartLine[]
+
+  updateQuantity: (
+    productId: string,
+    variantId: string,
+    quantity: number,
+  ) => void
+
+  removeLine: (productId: string, variantId: string) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+
+  const [cartOpen, setCartOpen] = useState(false)
+
+  const cartButtonRef = useRef<HTMLButtonElement>(null)
+
+  const closeCart = () => {
+    setCartOpen(false)
+
+    window.setTimeout(() => cartButtonRef.current?.focus(), 0)
+  }
+
   const go = (target: string) => {
     setMenuOpen(false)
+
+    setCartOpen(false)
+
     navigate(target)
   }
 
@@ -102,11 +150,15 @@ export function AppShell({
               active={false}
               onClick={() => {
                 go("/")
+
                 window.setTimeout(
                   () =>
                     document
+
                       .getElementById("como-comprar")
+
                       ?.scrollIntoView({ behavior: "smooth" }),
+
                   50,
                 )
               }}
@@ -122,7 +174,9 @@ export function AppShell({
                 onClick={() =>
                   window.open(
                     "https://wa.me/?text=Hola%2C%20quiero%20hacer%20una%20consulta%20a%20Rosana.",
+
                     "_blank",
+
                     "noopener,noreferrer",
                   )
                 }
@@ -131,8 +185,9 @@ export function AppShell({
               </Button>
             </div>
             <button
+              ref={cartButtonRef}
               type="button"
-              onClick={() => go("/carrito")}
+              onClick={() => setCartOpen(true)}
               className="relative grid size-11 place-items-center rounded-full bg-olive text-white transition hover:bg-olive-dark focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-terracotta"
               aria-label={`Ver carrito, ${cartCount} artículos`}
             >
@@ -179,11 +234,15 @@ export function AppShell({
                 active={false}
                 onClick={() => {
                   go("/")
+
                   window.setTimeout(
                     () =>
                       document
+
                         .getElementById("como-comprar")
+
                         ?.scrollIntoView({ behavior: "smooth" }),
+
                     50,
                   )
                 }}
@@ -246,11 +305,11 @@ export function AppShell({
         </div>
       </footer>
 
-      {cartCount > 0 && !path.startsWith("/carrito") ? (
+      {cartCount > 0 && !path.startsWith("/carrito") && !path.startsWith("/producto/") ? (
         <div className="fixed right-3 bottom-3 left-3 z-40 md:hidden">
           <button
             type="button"
-            onClick={() => go("/carrito")}
+            onClick={() => setCartOpen(true)}
             className="flex min-h-15 w-full items-center gap-3 rounded-card bg-terracotta px-5 text-left text-white shadow-xl focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-olive"
           >
             <span className="relative grid size-9 place-items-center rounded-full bg-white/15">
@@ -268,6 +327,233 @@ export function AppShell({
           </button>
         </div>
       ) : null}
+
+      <CartDrawer
+        open={cartOpen}
+        onClose={closeCart}
+        onCheckout={() => go("/carrito")}
+        lines={cartLines}
+        subtotal={cartSubtotal}
+        updateQuantity={updateQuantity}
+        removeLine={removeLine}
+      />
+    </div>
+  )
+}
+
+function CartDrawer({
+  open,
+
+  onClose,
+
+  onCheckout,
+
+  lines,
+
+  subtotal,
+
+  updateQuantity,
+
+  removeLine,
+}: {
+  open: boolean
+
+  onClose: () => void
+
+  onCheckout: () => void
+
+  lines: ResolvedCartLine[]
+
+  subtotal: number
+
+  updateQuantity: (
+    productId: string,
+    variantId: string,
+    quantity: number,
+  ) => void
+
+  removeLine: (productId: string, variantId: string) => void
+}) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+
+  const drawerRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose()
+
+        return
+      }
+
+      if (event.key !== "Tab") return
+
+      const focusable = drawerRef.current?.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+      )
+
+      if (!focusable?.length) return
+
+      const first = focusable[0]
+
+      const last = focusable[focusable.length - 1]
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+
+        first.focus()
+      }
+    }
+
+    document.body.style.overflow = "hidden"
+
+    window.addEventListener("keydown", handleKeyDown)
+
+    window.setTimeout(() => closeRef.current?.focus(), 0)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [onClose, open])
+
+  if (!open) return null
+
+  const hasChanges = lines.some(cartLineNeedsReview)
+
+  return (
+    <div className="fixed inset-0 z-[60]" role="presentation">
+      <button
+        type="button"
+        aria-label="Cerrar carrito"
+        onClick={onClose}
+        className="absolute inset-0 bg-olive-dark/45 backdrop-blur-[1px]"
+      />
+      <aside
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-drawer-title"
+        className="absolute top-0 right-0 flex h-full w-full max-w-md flex-col bg-cream shadow-2xl"
+      >
+        <header className="flex items-center justify-between border-b border-sand/25 px-5 py-4">
+          <div>
+            <p className="text-xs font-bold tracking-widest text-terracotta uppercase">
+              Tu selección
+            </p>
+            <h2
+              id="cart-drawer-title"
+              className="font-display text-3xl font-semibold text-olive-dark"
+            >
+              Carrito
+            </h2>
+          </div>
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            className="grid size-11 place-items-center rounded-full text-olive-dark hover:bg-cream-soft focus-visible:outline-3 focus-visible:outline-olive"
+            aria-label="Cerrar carrito"
+          >
+            <Icon name="x" />
+          </button>
+        </header>
+
+        <div className="flex-1 overflow-y-auto px-5 py-3">
+          {!lines.length ? (
+            <p className="rounded-card bg-white p-5 text-sm text-charcoal/65">
+              Todavía no agregaste productos.
+            </p>
+          ) : (
+            <ul className="divide-y divide-sand/25">
+              {lines.map((line) => (
+                <li
+                  key={`${line.productId}-${line.variantId}`}
+                  className="py-4"
+                >
+                  <div className="flex gap-3">
+                    <img
+                      src={line.product.image}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="size-16 shrink-0 rounded-control object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-terracotta">
+                        {line.variant.label}
+                      </p>
+                      <h3 className="font-display text-lg font-semibold text-olive-dark">
+                        {line.product.name}
+                      </h3>
+                      <p className="mt-1 text-sm font-bold">
+                        {formatPrice(line.subtotal)}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeLine(line.productId, line.variantId)}
+                      className="grid size-11 shrink-0 place-items-center rounded-full text-terracotta-dark hover:bg-terracotta-soft focus-visible:outline-3 focus-visible:outline-terracotta"
+                      aria-label={`Eliminar ${line.product.name}, ${line.variant.label}`}
+                    >
+                      <Icon name="trash" className="size-4" />
+                    </button>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <QuantityStepper
+                      compact
+                      value={line.quantity}
+                      max={line.variant.stock}
+                      onChange={(quantity) =>
+                        updateQuantity(line.productId, line.variantId, quantity)
+                      }
+                    />
+                    {cartLineNeedsReview(line) ? (
+                      <span className="text-right text-xs font-bold text-terracotta-dark">
+                        Revisar disponibilidad o precio
+                      </span>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <footer className="border-t border-sand/25 bg-white p-5">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <span className="text-sm text-charcoal/65">Subtotal</span>
+            <strong className="font-display text-3xl text-olive-dark">
+              {formatPrice(subtotal)}
+            </strong>
+          </div>
+          <Button
+            disabled={!lines.length}
+            onClick={onCheckout}
+            className="w-full"
+          >
+            Revisar y enviar pedido
+          </Button>
+          {hasChanges ? (
+            <p className="mt-3 text-center text-xs text-terracotta-dark">
+              Hay cambios para revisar antes de enviar.
+            </p>
+          ) : (
+            <p className="mt-3 text-center text-xs text-charcoal/60">
+              Stock, entrega y pago se confirman con Rosana.
+            </p>
+          )}
+        </footer>
+      </aside>
     </div>
   )
 }

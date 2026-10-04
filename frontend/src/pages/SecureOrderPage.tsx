@@ -1,30 +1,54 @@
 import { useCallback, useEffect, useState } from "react"
+
 import type { Navigate } from "../components/layout"
+
 import { Button, Eyebrow } from "../components/ui"
+
 import { formatPrice } from "../data/products"
+
 import { ApiError } from "../lib/api"
+
 import { getOrder, type ApiOrder } from "../lib/order-api"
-import { orderDate, statusLabels } from "../lib/order-status"
+
+import {
+  nextStep,
+  orderDate,
+  orderProgress,
+  statusLabels,
+} from "../lib/order-status"
+
 import { buildWhatsAppMessage } from "../lib/order-message"
 
 export default function OrderPage({
   id,
+
   initialOrder,
+
   navigate,
 }: {
   id: string
+
   initialOrder: ApiOrder | null
+
   navigate: Navigate
 }) {
   const [order, setOrder] = useState<ApiOrder | null>(
     initialOrder?.id === id ? initialOrder : null,
   )
+
   const [loading, setLoading] = useState(true)
+
   const [error, setError] = useState("")
+
   const [message, setMessage] = useState("")
+
+  const [whatsAppBlocked, setWhatsAppBlocked] = useState(false)
+
   const reload = useCallback(async () => {
     setLoading(true)
+
     setError("")
+
     try {
       setOrder(await getOrder(id))
     } catch (error) {
@@ -36,6 +60,7 @@ export default function OrderPage({
         )
       ) {
         setOrder(null)
+
         setError(
           error instanceof ApiError && error.status === 403
             ? "Accedé desde tu email para consultar este pedido."
@@ -48,10 +73,34 @@ export default function OrderPage({
       setLoading(false)
     }
   }, [id, initialOrder])
+
   useEffect(() => {
     void reload()
   }, [reload])
+
   const number = import.meta.env.VITE_WHATSAPP_NUMBER?.replace(/\D/g, "")
+
+  const openWhatsApp = () => {
+    if (!order || !number) return
+
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`
+
+    const popup = window.open(url, "_blank")
+
+    if (!popup) {
+      setWhatsAppBlocked(true)
+
+      setMessage("WhatsApp no se abrió. Podés reenviar o copiar el resumen.")
+
+      return
+    }
+
+    popup.opener = null
+
+    setWhatsAppBlocked(false)
+  }
+
+  const progress = order ? orderProgress(order) : null
 
   return (
     <div className="page-container space-y-6 py-9 md:py-14">
@@ -92,6 +141,32 @@ export default function OrderPage({
               Creado: {orderDate(order.created_at)} · Actualizado:{" "}
               {orderDate(order.updated_at)}
             </p>
+            {progress && progress.current >= 0 ? (
+              <div className="space-y-3 border-t border-sand/25 pt-4">
+                <p className="text-sm font-bold text-olive-dark">
+                  Próximo paso
+                </p>
+                <p className="text-sm">{nextStep(order)}</p>
+                <ol className="flex gap-1" aria-label="Progreso del pedido">
+                  {progress.steps.map((status, index) => (
+                    <li key={status} className="min-w-0 flex-1">
+                      <span
+                        className={`block h-2 rounded-full ${
+                          index <= progress.current ? "bg-olive" : "bg-sand/35"
+                        }`}
+                      />
+                      <span className="mt-1 block truncate text-[10px] text-charcoal/65">
+                        {statusLabels[status]}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            ) : (
+              <p className="border-t border-sand/25 pt-4 text-sm">
+                {nextStep(order)}
+              </p>
+            )}
             {order.reservation_expires_at && (
               <p className="text-sm font-semibold">
                 Reserva pendiente hasta{" "}
@@ -155,14 +230,9 @@ export default function OrderPage({
               <p className="break-all text-sm">{order.email}</p>
               <div className="flex flex-wrap gap-3 pt-3">
                 {number ? (
-                  <a
-                    className="inline-flex min-h-11 items-center justify-center rounded-control bg-terracotta px-5 py-3 text-sm font-bold text-white focus-visible:outline-3 focus-visible:outline-olive"
-                    href={`https://wa.me/${number}?text=${encodeURIComponent(buildWhatsAppMessage(order))}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
+                  <Button icon="whatsapp" onClick={openWhatsApp}>
                     Enviar resumen a WhatsApp
-                  </a>
+                  </Button>
                 ) : (
                   <p className="text-sm">
                     WhatsApp aún no está configurado. Podés copiar el resumen.
@@ -175,6 +245,7 @@ export default function OrderPage({
                       await navigator.clipboard.writeText(
                         buildWhatsAppMessage(order),
                       )
+
                       setMessage("Resumen copiado.")
                     } catch {
                       setMessage(
@@ -185,6 +256,15 @@ export default function OrderPage({
                 >
                   Copiar resumen
                 </Button>
+                {whatsAppBlocked && number ? (
+                  <Button
+                    variant="secondary"
+                    icon="whatsapp"
+                    onClick={openWhatsApp}
+                  >
+                    Reenviar mensaje
+                  </Button>
+                ) : null}
               </div>
               {message && (
                 <p role="status" className="text-sm">

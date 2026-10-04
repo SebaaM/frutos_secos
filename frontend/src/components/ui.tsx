@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react"
 
-export type IconName = "arrow" | "bag" | "check" | "chevron" | "clock" | "copy" | "instagram" | "leaf" | "location" | "menu" | "minus" | "phone" | "plus" | "trash" | "warning" | "whatsapp" | "x"
+export type IconName = "arrow" | "bag" | "check" | "chevron" | "clock" | "copy" | "instagram" | "leaf" | "location" | "menu" | "minus" | "phone" | "plus" | "search" | "trash" | "warning" | "whatsapp" | "x"
 
 export function Icon({
   name,
@@ -56,6 +56,12 @@ export function Icon({
       <path d="M7 3H4a1 1 0 0 0-1 1c0 9.4 7.6 17 17 17a1 1 0 0 0 1-1v-3l-4-2-2 2c-4-1.5-6.5-4-8-8l2-2-2-4Z" />
     ),
     plus: <path d="M12 5v14M5 12h14" />,
+    search: (
+      <>
+        <circle cx="11" cy="11" r="6.5" />
+        <path d="m16 16 4 4" />
+      </>
+    ),
     trash: (
       <>
         <path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14" />

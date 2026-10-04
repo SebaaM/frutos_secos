@@ -7,17 +7,22 @@ import {
   type Product,
   type ProductVariant,
 } from "../data/products"
+
 import { Button, Icon, StockBadge } from "./ui"
 
 export function ProductCard({
   product,
+
   onOpen,
 }: {
   product: Product
+
   onOpen: () => void
 }) {
   const totalStock = getProductStock(product)
+
   const stockState = getStockState(totalStock)
+
   const firstAvailable = product.variants.find((variant) => variant.stock > 0)
 
   return (
@@ -31,6 +36,8 @@ export function ProductCard({
         <img
           src={product.image}
           alt={product.imageAlt}
+          loading="lazy"
+          decoding="async"
           className={`size-full object-cover transition duration-500 group-hover:scale-[1.03] ${
             stockState === "out" ? "grayscale-[35%]" : ""
           }`}
@@ -41,7 +48,9 @@ export function ProductCard({
       </button>
       <div className="flex flex-1 flex-col p-4 md:p-5">
         <p className="mb-1 text-[11px] font-bold tracking-[0.12em] text-terracotta uppercase">
-          {product.categoryName || categoryLabels[product.category] || product.category}
+          {product.categoryName ||
+            categoryLabels[product.category] ||
+            product.category}
         </p>
         <h3 className="font-display text-xl leading-tight font-semibold text-olive-dark">
           {product.name}
@@ -72,11 +81,15 @@ export function ProductCard({
 
 export function WeightSelector({
   variants,
+
   selectedId,
+
   onSelect,
 }: {
   variants: ProductVariant[]
+
   selectedId: string
+
   onSelect: (variant: ProductVariant) => void
 }) {
   return (
@@ -87,7 +100,9 @@ export function WeightSelector({
       <div className="grid grid-cols-3 gap-2">
         {variants.map((variant) => {
           const active = variant.id === selectedId
+
           const disabled = variant.stock <= 0
+
           return (
             <button
               type="button"
@@ -119,15 +134,23 @@ export function WeightSelector({
 
 export function QuantityStepper({
   value,
+
   min = 1,
+
   max,
+
   onChange,
+
   compact = false,
 }: {
   value: number
+
   min?: number
+
   max: number
+
   onChange: (value: number) => void
+
   compact?: boolean
 }) {
   return (
