@@ -151,10 +151,12 @@ agotados totales/parciales y filtros de reposición. Requiere Node 22.6+ con sop
 (entorno actual Node 24), sin instalar otro framework de pruebas. Validar también TypeScript,
 build y disposición a 320 px y escritorio. Las pruebas no escriben sobre el catálogo real.
 
-## Etapa 2 acordada (no implementada)
+## Etapa 2 implementada
 
-- Autenticación de operadores en todo el backoffice.
-- Pedidos persistentes, reservas, historial de estados y tablero móvil.
-- “Próximos” por antigüedad, sin agenda ni franjas horarias.
-- Cliente: acceso mediante enlace por email, sin contraseña.
-- Analíticas y dashboards quedan para más adelante.
+El backoffice ya exige autenticación de operadores y tiene pedidos persistentes,
+reservas, historial de estados y tablero móvil. “Próximos” se ordena por
+antigüedad, sin agenda ni franjas horarias. El cliente accede a sus pedidos por
+un enlace de email sin contraseña. Consultar [pedidos.md](pedidos.md) para el
+detalle operativo y de seguridad.
+
+Analíticas y dashboards siguen fuera del alcance actual.

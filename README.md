@@ -13,6 +13,18 @@ Ecommerce local de frutos secos, mixes y hierbas naturales. La tienda permite ar
 └── AGENTS.md    # Convenciones del proyecto
 ```
 
+## Estado implementado
+
+- Catálogo público conectado a Django, con variantes de peso fijo, carrito único
+  y revalidación de precio/disponibilidad antes de crear un pedido.
+- Backoffice local y autenticado para categorías, productos, galería, inventario
+  por presentación y ajustes de stock auditados.
+- Pedidos persistentes con reservas transaccionales, tablero móvil por estado,
+  seguimiento privado por enlace de email y coordinación manual por WhatsApp.
+
+El backlog vigente está en [TODO.md](TODO.md). Las decisiones y límites de cada
+área se documentan en [docs/](docs/README.md).
+
 ## Ejecutar el frontend
 
 Requisitos: Node.js y pnpm.
@@ -67,9 +79,7 @@ Desde `frontend/`: `pnpm test`, `node node_modules/typescript/bin/tsc --noEmit` 
 Las pruebas de alertas de stock utilizan el runner de Node con type stripping (Node 22.6+; entorno actual 24).
 Las pruebas Django usan una base temporal; no recargan ni borran el catálogo local.
 
-## Próximos pasos
+## Trabajo pendiente
 
-1. Crear operadores reales y configurar SMTP, PostgreSQL y WhatsApp fuera de Git.
-2. Confirmar calendario hábil y habilitar scheduler de vencimientos; recordatorios/alertas previas pendientes.
-3. Validar concurrencia con PostgreSQL y preparar el despliegue HTTPS y política de acceso administrativo.
-4. Roles por función, auditoría de ajustes por operador y analíticas quedan para próximas etapas.
+Consultar [TODO.md](TODO.md) para las tareas operativas, de privacidad, calidad y
+las ideas de producto que siguen sin implementar.
