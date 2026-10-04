@@ -52,11 +52,18 @@ This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin con
 - SKU/price/stock belong to a fixed-weight variant. Convert kg to whole grams; stock quantities count packages.
 - Reserved stock is read-only. Existing physical stock changes only through an adjustment with reason/history.
 - Stock alerts/filters use `backoffice/stock-status.ts`: per active variant, 0 = out, 1–5 = low. Do not hide exhausted weights behind an aggregate or treat no active variants as exhausted. Run `pnpm test` (Node with type stripping) for regression checks.
+- `InventoryPage.tsx` is the daily default: show active, published variants that need attention first,
+  group them under their product, and include drafts only when the operator requests them. Do not present
+  “stock partial” as a separate operational task.
+- `StockPanel.tsx` receives the final physical count, derives the delta and keeps reason, expected stock
+  and Django validation. Load movements only after the operator asks for history.
 - Keep decimal API prices as strings in editors. Do not send reserved or existing physical stock when saving metadata.
 - Gallery supports multiple files/URLs, descriptions, credits and cover/order. New uploads save with the product; existing gallery actions save immediately.
 - Refer to `../docs/backoffice.md`, `../docs/pedidos.md` and `../docs/context.md` for current scope.
 - Orders and session contracts live in `lib/order-api.ts`. `api.ts` attaches credentials and CSRF to writes, including anonymous checkout/login; never silently retry mutations.
 - Do not read or overwrite the prototype order-history storage. Store customer/staff access in HttpOnly server sessions, not local tokens; email/reference alone is not authentication.
 - Orders board groups and UI actions live in `lib/order-status.ts`; backend remains authoritative. Pending orders are sorted by age, with independent pages per column and no scheduling.
+- `lib/cart.ts` is the single cart source for the offcanvas cart and checkout. Preserve price/availability
+  review before creating an order; avoid adding a second cart state or redundant purchase actions.
 - Oxfmt 0.2 removes separators in inline multi-property TS types: use multiline properties and run TypeScript after formatting.
 - Validate with `node node_modules/typescript/bin/tsc --noEmit` and `pnpm build`.

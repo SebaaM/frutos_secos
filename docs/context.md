@@ -3,12 +3,17 @@
 ## Estructura actual
 
 - `frontend/`: React 19, TypeScript, Vite 8 y Tailwind CSS 4; interfaz pública importada de Figma Make.
-- `frontend/src/backoffice/`: panel React de catálogo, imágenes y stock, en `/backoffice`.
+- `frontend/src/backoffice/`: panel React de inventario, catálogo, imágenes y pedidos, en `/backoffice`.
+- `frontend/src/backoffice/InventoryPage.tsx`: vista inicial de operación diaria; prioriza por
+  presentación publicada agotada o con pocas unidades. `StockPanel.tsx` ajusta el conteo físico final
+  y carga el historial solo a demanda.
 - `frontend/src/backoffice/stock-status.ts`: criterios compartidos de alertas/filtros por presentación activa;
   `StockBadge.tsx`: indicadores y resumen de disponible/reservado/físico. Pruebas con `pnpm test`.
 - `frontend/src/lib/api.ts`: base de API y tratamiento de errores compartidos.
 - `frontend/src/lib/catalog-api.ts`: adaptación del catálogo público a los componentes existentes.
 - `frontend/src/lib/backoffice-api.ts`: contratos administrativos; precios transportados como strings decimales.
+- `frontend/src/lib/cart.ts`: fuente única del carrito, snapshots de precio y revisión de disponibilidad
+  antes del checkout.
 - `backend/`: Django 5.2 LTS y Django REST Framework; PostgreSQL mediante `DATABASE_URL`.
 - SQLite se usa solo como arranque local cuando no se configura `DATABASE_URL`.
 - `docs/backoffice.md`: fuente de verdad del catálogo; `docs/pedidos.md`: pedidos y acceso de etapa 2.
@@ -17,7 +22,8 @@
   drf-spectacular y sidecar sirven assets locales, sin CDN; documentación protegida por el guard local.
 
 React y Django se comunican por API, sin compartir modelos internos. La navegación actual
-usa History API; no se agregó un router ni otro framework de UI.
+usa History API; no se agregó un router ni otro framework de UI. El carrito se abre también como
+panel lateral desde la exploración del catálogo, sin duplicar su estado ni sumar pasos al pedido.
 El estilo mantiene crema, verde oliva y terracota, tipografía Fraunces/DM Sans,
 controles de al menos 44 px y disposición mobile-first.
 
@@ -35,9 +41,10 @@ controles de al menos 44 px y disposición mobile-first.
 
 Django valida publicación, peso, stock y galería. Disponible = físico − reservado.
 Los ajustes tienen motivo, protección de concurrencia y transacción; no se editan reservas.
-La UI alerta por presentación activa: 0 agotado, 1–5 últimas unidades, 6+ disponible.
-Un producto con algún peso agotado y otros disponibles tiene stock parcial; sin variantes activas
-no se clasifica como agotado. El disponible existente se lee desde la API, nunca del físico solamente.
+La UI alerta por presentación activa: 0 agotado, 1–5 últimas unidades, 6+ disponible. Inventario abre
+en **Para atender** y no usa “stock parcial” como tarea: muestra cada peso agotado o bajo directamente.
+Los borradores se incluyen solo de forma intencional. Sin variantes activas no se clasifica como agotado.
+El disponible existente se lee desde la API, nunca del físico solamente.
 No se borran productos, categorías ni variantes desde el panel; se desactivan/ocultan.
 Las imágenes sí pueden quitarse de la galería; se preservan los archivos físicos locales.
 
@@ -57,8 +64,8 @@ tablas nuevas y no reescriben el catálogo. No recargar `sample_catalog` sobre d
 - `.env.example` es una referencia: Django lee variables del proceso y no carga un `.env` automáticamente.
 
 El catálogo público ya consulta Django. Los datos estáticos siguen como fallback visual;
-no se utilizan para el backoffice. El carrito se revalida contra el catálogo recibido y se
-vuelve a consultar el catálogo al regresar desde el panel.
+no se utilizan para el backoffice. El carrito lateral y la página de carrito comparten los mismos datos,
+se revalidan contra el catálogo recibido y se vuelve a consultar el catálogo al regresar desde el panel.
 
 ## Pedidos y autenticación: etapa 2 implementada
 

@@ -23,6 +23,8 @@
 - Guardar secretos y números reales de WhatsApp solo en variables de entorno, nunca en archivos versionados.
 - Para importes, usar `Decimal` o enteros en unidades menores en backend; nunca `float`.
 - Mantener la experiencia mobile-first y controles accesibles de al menos 44 × 44 px.
+- Mantener el pedido breve: carrito único, disponible como panel lateral durante la exploración y como
+  página de revisión, sin estados duplicados ni botones redundantes.
 - No hacer afirmaciones terapéuticas sobre hierbas ni promesas de salud no verificadas.
 
 ## Backoffice de catálogo (etapa 1)
@@ -33,6 +35,13 @@
 - Para publicar: categoría activa, imagen y presentación activa con precio positivo.
 - No borrar productos, categorías ni variantes: borrador/desactivación. No recargar fixtures ni reiniciar la base de datos existente.
 - Reservado de solo lectura. El físico existente solo cambia por ajustes con motivo e historial; no bajar del reservado.
+- Inventario es la vista inicial de operación: prioriza por presentación activa y publicada agotada o con
+  1–5 paquetes disponibles. No usar “stock parcial” como tarea; los borradores se incluyen solo a pedido.
+- El ajuste rápido recibe el conteo físico final, calcula el delta/disponible y conserva `expected_stock`,
+  motivo e historial en Django. El historial se carga solo al solicitarlo; no permitir editar reservado.
+- Publicar u ocultar un producto puede ser rápido desde Inventario. Ocultar debe advertir que afecta solo
+  pedidos nuevos; publicar conserva las validaciones completas de catálogo. Las variantes se activan o
+  desactivan únicamente desde el editor de producto.
 - Múltiples imágenes: máximo 10; JPEG/PNG/WebP hasta 5 MB; descripción obligatoria y primera posición como portada.
 - Mantener URLs existentes. Medios locales en `backend/media/`, nunca en Git. Al quitar de la galería, conservar archivo físico para recuperación manual.
 - Administración requiere operador activo is_staff y sesión con CSRF. Conserva además DEBUG, BACKOFFICE_ENABLED, cliente local y origen permitido; autenticación no habilita exposición remota.
