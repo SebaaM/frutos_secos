@@ -1,6 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import {
+  matchesInventoryFilter,
   matchesStockFilter,
   productStock,
   variantStockState,
@@ -80,4 +81,14 @@ test("healthy stock has no restocking alert and clearing filter restores all pro
   assert.equal(matchesStockFilter(variants, "available"), true)
   assert.equal(matchesStockFilter(variants, "attention"), false)
   assert.equal(matchesStockFilter([], ""), true)
+})
+
+test("inventory works per active presentation and prioritizes only low or exhausted stock", () => {
+  assert.equal(matchesInventoryFilter(variant(0), "attention"), true)
+  assert.equal(matchesInventoryFilter(variant(5), "attention"), true)
+  assert.equal(matchesInventoryFilter(variant(6), "attention"), false)
+  assert.equal(matchesInventoryFilter(variant(0), "out"), true)
+  assert.equal(matchesInventoryFilter(variant(5), "low"), true)
+  assert.equal(matchesInventoryFilter(variant(6), "all"), true)
+  assert.equal(matchesInventoryFilter(variant(0, false), "all"), false)
 })

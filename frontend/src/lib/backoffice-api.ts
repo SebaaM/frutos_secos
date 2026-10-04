@@ -70,6 +70,12 @@ export const listCategories = () =>
 export const getProduct = (id: number) =>
   apiRequest<AdminProduct>(`${base}/products/${id}/`)
 
+export const setProductPublication = (id: number, is_published: boolean) =>
+  apiRequest<AdminProduct>(
+    `${base}/products/${id}/`,
+    jsonRequest("PATCH", { is_published }),
+  )
+
 export function saveProduct(id: number | undefined, draft: ProductDraft) {
   const variants = draft.variants.map((variant) => ({
     ...(variant.id

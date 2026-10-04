@@ -5,13 +5,17 @@ import { formatPrice } from "../data/products"
 import {
   listCategories,
   listProducts,
+  setProductPublication,
   type AdminCategory,
   type AdminProduct,
+  type AdminVariant,
 } from "../lib/backoffice-api"
 
 import Categories from "./Categories"
 
 import ProductEditor from "./ProductEditor"
+
+import InventoryPage from "./InventoryPage"
 
 import StockBadge from "./StockBadge"
 
@@ -50,7 +54,11 @@ export default function BackofficePage({
 
   const [notice, setNotice] = useState("")
 
-  const [tab, setTab] = useState("orders")
+  const [tab, setTab] = useState("inventory")
+
+  const [publicationBusyId, setPublicationBusyId] = useState<number | null>(
+    null,
+  )
 
   const [editor, setEditor] = useState<{
     key: string
@@ -121,6 +129,8 @@ export default function BackofficePage({
   }
 
   function openEditor(product: AdminProduct | null) {
+    setTab("products")
+
     setEditor({ key: crypto.randomUUID(), product })
 
     setDirty(false)
@@ -136,6 +146,35 @@ export default function BackofficePage({
         (a, b) => a.name.localeCompare(b.name),
       ),
     )
+  }
+
+  function stockUpdated(variant: AdminVariant) {
+    setProducts((current) =>
+      current.map((product) => ({
+        ...product,
+        variants: product.variants.map((item) =>
+          item.id === variant.id ? variant : item,
+        ),
+      })),
+    )
+  }
+
+  async function togglePublication(product: AdminProduct) {
+    setPublicationBusyId(product.id)
+    try {
+      const updated = await setProductPublication(
+        product.id,
+        !product.is_published,
+      )
+      productSaved(updated)
+      setNotice(
+        updated.is_published
+          ? `${updated.name} ya está visible en la tienda.`
+          : `${updated.name} quedó oculto para pedidos nuevos.`,
+      )
+    } finally {
+      setPublicationBusyId(null)
+    }
   }
 
   function categorySaved(category: AdminCategory) {
@@ -160,32 +199,6 @@ export default function BackofficePage({
       matchesStockFilter(product.variants, stock)
     )
   })
-
-  const attentionCount = products.filter(
-    (product) => productStock(product.variants).needsAttention,
-  ).length
-
-  const outCount = products.filter(
-    (product) => productStock(product.variants).state === "out",
-  ).length
-
-  const partialCount = products.filter(
-    (product) => productStock(product.variants).state === "partial",
-  ).length
-
-  const lowCount = products.filter(
-    (product) => productStock(product.variants).low > 0,
-  ).length
-
-  function showStock(filter: string) {
-    setSearch("")
-
-    setCategory("")
-
-    setPublished("")
-
-    setStock(filter)
-  }
 
   return (
     <div className="min-h-screen bg-cream">
@@ -246,6 +259,14 @@ export default function BackofficePage({
           className="flex flex-wrap gap-2"
           aria-label="Secciones del backoffice"
         >
+          <button
+            className={tab === "inventory" ? primaryClass : actionClass}
+            disabled={saving}
+            onClick={() => changeTab("inventory")}
+            aria-current={tab === "inventory" ? "page" : undefined}
+          >
+            Inventario
+          </button>
           <button
             className={tab === "orders" ? primaryClass : actionClass}
             disabled={saving}
@@ -309,6 +330,15 @@ export default function BackofficePage({
                 }
               }}
             />
+          ) : tab === "inventory" ? (
+            <InventoryPage
+              products={products}
+              onUpdated={stockUpdated}
+              onEdit={openEditor}
+              onRefresh={() => void reload()}
+              onTogglePublication={togglePublication}
+              publicationBusyId={publicationBusyId}
+            />
           ) : tab === "categories" ? (
             <Categories
               categories={categories}
@@ -340,66 +370,6 @@ export default function BackofficePage({
                   </button>
                 </div>
               </div>
-              {attentionCount > 0 && (
-                <section
-                  className="space-y-3 rounded-card border-2 border-terracotta/50 bg-terracotta-soft p-4"
-                  aria-label="Alertas de stock"
-                >
-                  <div>
-                    <h2 className="text-lg font-bold text-terracotta-dark">
-                      {attentionCount}{" "}
-                      {attentionCount === 1
-                        ? "producto necesita"
-                        : "productos necesitan"}{" "}
-                      atención de stock
-                    </h2>
-                    <p className="mt-1 text-sm text-terracotta-dark">
-                      Revisá cada peso: puede estar agotado aunque otro tenga
-                      unidades. Últimas unidades: 1–5 paquetes disponibles.
-                    </p>
-                    <p className="mt-1 text-xs text-terracotta-dark">
-                      Incluye publicados y borradores de todo el catálogo. Una
-                      presentación inactiva no genera alertas.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      className={primaryClass}
-                      aria-pressed={stock === "attention"}
-                      onClick={() => showStock("attention")}
-                    >
-                      Ver productos por reponer
-                    </button>
-                    {outCount > 0 && (
-                      <button
-                        className={actionClass}
-                        aria-pressed={stock === "out"}
-                        onClick={() => showStock("out")}
-                      >
-                        Sin stock ({outCount})
-                      </button>
-                    )}
-                    {partialCount > 0 && (
-                      <button
-                        className={actionClass}
-                        aria-pressed={stock === "partial"}
-                        onClick={() => showStock("partial")}
-                      >
-                        Stock parcial ({partialCount})
-                      </button>
-                    )}
-                    {lowCount > 0 && (
-                      <button
-                        className={actionClass}
-                        aria-pressed={stock === "low"}
-                        onClick={() => showStock("low")}
-                      >
-                        Últimas unidades ({lowCount})
-                      </button>
-                    )}
-                  </div>
-                </section>
-              )}
               <section
                 className="grid gap-4 rounded-card border border-sand/30 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
                 aria-label="Filtros de productos"

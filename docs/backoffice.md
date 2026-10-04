@@ -9,7 +9,18 @@ Métricas y dashboards permanecen fuera de alcance.
 
 ## Operación
 
-- Listado con búsqueda por nombre o SKU y filtros por categoría, publicación y disponibilidad.
+- La sección inicial es **Inventario**: muestra primero las presentaciones publicadas agotadas o con
+  1–5 paquetes disponibles. Cada peso tiene su propia fila de trabajo, aun si otro peso del producto
+  tiene unidades.
+- Inventario ofrece solo búsqueda por nombre/SKU y los accesos **Para atender**, **Agotadas**,
+  **Últimas unidades** y **Todo**. Los borradores quedan fuera por defecto y se incluyen con un
+  único control cuando hace falta revisarlos.
+- Desde cada producto se puede ocultar o publicar rápidamente. Al ocultarlo se confirma que deja de
+  venderse en pedidos nuevos y que los pedidos existentes no cambian. Al publicar se mantienen las
+  validaciones de categoría, imagen y presentación activa con precio positivo; si no se cumplen,
+  hay que completar el editor.
+- La sección **Productos** conserva el listado y el editor completo, con búsqueda por nombre o SKU y
+  filtros por categoría, publicación y disponibilidad.
 - Alta/edición: nombre, identificador URL, categoría, descripción, ingredientes, alérgenos,
   conservación y selección de destacados.
 - Los productos nuevos proponen **publicar al guardar**. Se puede desmarcar para guardar un borrador.
@@ -34,34 +45,31 @@ La interfaz admite g y kg y guarda siempre gramos enteros.
 - Stock contado en **paquetes de cada presentación**, no materia prima a granel.
 - Disponible = físico − reservado. Reservado es de solo lectura.
 - El stock inicial de presentaciones nuevas queda registrado como movimiento.
-- Ajustes posteriores: cantidad con signo (+ reposición, − merma), motivo obligatorio y
-  valor físico esperado para detectar cambios hechos desde otra pantalla.
+- Ajustes posteriores: se ingresa el **conteo físico final** y la interfaz calcula el delta y el
+  disponible. Incluye accesos +1 y +5, motivo preseleccionado (reposición, corrección de conteo o
+  merma), nota opcional y valor físico esperado para detectar cambios hechos desde otra pantalla.
 - No se permite físico negativo ni menor al reservado. Un conflicto devuelve HTTP 409:
   hay que actualizar el producto antes de intentar nuevamente.
 - Peso y activación quedan protegidos si hay unidades reservadas.
-- Historial: últimas 100 operaciones, con fecha, motivo, delta, físico anterior y resultante.
+- Historial: últimas 100 operaciones, con fecha, motivo, delta, físico anterior y resultante. Se
+  consulta solo al pulsar **Ver historial**, para que la reposición cotidiana sea inmediata.
   Los ajustes físicos de catálogo aún no atribuyen usuario al movimiento; esa ampliación de auditoría
   sigue pendiente. Las transiciones de pedidos sí guardan su operador en OrderEvent.
 
 ### Alertas de reposición
 
-- El listado destaca **Sin stock** (terracota), **Últimas unidades** (ámbar) y disponible (oliva),
+- Inventario destaca **Sin stock** (terracota), **Últimas unidades** (ámbar) y disponible (oliva),
   con texto e indicadores además del color. Muestra paquetes disponibles para cada peso.
 - Últimas unidades significa **1–5 paquetes disponibles por presentación activa**, no la suma del producto.
-- **Stock parcial / Presentaciones agotadas**: al menos un peso activo agotado y otro con unidades.
-  El stock de otros pesos no oculta la alerta. **Sin stock** exige que todas las presentaciones activas estén agotadas.
+- La tarea de reposición existe por presentación, no por producto: no se usa “stock parcial” como
+  alerta operativa. Si un peso está agotado, aparece en **Agotadas** aunque otro peso tenga unidades.
 - Sin presentaciones activas es un estado neutro: no se considera agotado ni genera alertas.
   Las variantes inactivas tampoco entran en las cantidades disponibles o en las alertas.
-- La franja de alertas permite ver productos por reponer, totalmente agotados, stock parcial o últimas unidades.
-  Incluye publicados y borradores de todo el catálogo, independientemente de los filtros actuales;
-  al pulsar un acceso rápido limpia búsqueda/categoría/publicación para mostrar todos los afectados.
-  Un producto puede aparecer en stock parcial y últimas unidades; el total de afectados no lo duplica.
-- El editor y el panel de ajustes separan disponible, reservado y físico, destacando el disponible.
-  Si el físico está reservado, el mensaje indica que no está disponible para vender; no supone una merma.
-- El botón **Reponer stock / Ver historial** abre y enfoca el panel de ajuste existente.
-  Sigue requiriendo un motivo y validación transaccional en Django; no repone automáticamente.
-- Los cambios de stock confirmados por Django actualizan los indicadores del editor. Al volver al listado
-  o pulsar Actualizar se consulta nuevamente la API. No hay notificaciones externas, polling ni dashboard.
+- El panel de ajuste separa disponible, reservado y físico, destacando el disponible y el resultado
+  esperado antes de confirmar. Si el físico está reservado, el mínimo del conteo impide quitar esas
+  unidades; Django vuelve a validarlo dentro de su transacción.
+- Los cambios de stock confirmados por Django actualizan el indicador de inventario y el editor. Al
+  pulsar Actualizar se consulta nuevamente la API. No hay notificaciones externas, polling ni dashboard.
 - En presentaciones nuevas, el stock mostrado es inicial y pendiente de guardar.
 
 Producto y presentaciones se guardan en una misma transacción. Las operaciones de galería

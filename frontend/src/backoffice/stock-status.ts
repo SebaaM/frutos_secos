@@ -2,6 +2,7 @@ import type { AdminVariant } from "../lib/backoffice-api"
 
 export const LOW_STOCK_LIMIT = 5
 export type StockState = "available" | "low" | "out" | "partial" | "inactive"
+export type InventoryFilter = "attention" | "out" | "low" | "all"
 type StockVariant = Pick<AdminVariant, "is_active" | "stock_available">
 
 export function variantStockState(variant: StockVariant): StockState {
@@ -59,4 +60,15 @@ export function matchesStockFilter(
     default:
       return true
   }
+}
+
+export function matchesInventoryFilter(
+  variant: StockVariant,
+  filter: InventoryFilter,
+) {
+  const state = variantStockState(variant)
+  if (!variant.is_active) return false
+  if (filter === "all") return true
+  if (filter === "attention") return state === "out" || state === "low"
+  return state === filter
 }
