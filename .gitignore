@@ -21,6 +21,7 @@ media/
 db.sqlite3
 
 # Tooling and operating system files
+*.log
 .coverage
 htmlcov/
 .pytest_cache/

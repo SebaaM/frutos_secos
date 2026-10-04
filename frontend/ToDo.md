@@ -227,3 +227,8 @@ Este documento reúne las mejoras sugeridas para convertir el prototipo actual e
 ## 9. Principio de producto recomendado
 
 Antes de agregar nuevas pantallas, priorizar que pedido, stock, estado, email e historial sean datos reales y sincronizados. La infraestructura operativa aportará más valor que ampliar el catálogo o sumar complejidad visual.
+
+## 10. Compresion de imagenes al cargar
+
+optimizacion de imagenes para mostrar la web, utilizar placeholders.
+realizar algun tipo de optimizacion de imagens para que sean mas livianas al cargar.
